@@ -10,7 +10,16 @@
   (:import-from #:wst.routing
                 #:add-route)
   (:import-from #:wst.routing
-                #:remove-route))
+                #:remove-route)
+  (:import-from #:str
+                #:join)
+  (:export
+   #:build-webserver
+   #:wrap
+   #:any-route
+   #:route
+   #:group
+   #:resource))
 
 (in-package #:wst.routing.dsl)
 
@@ -20,6 +29,7 @@
       stack
     (destructuring-bind (method &rest rest)
         api
+      (declare (ignorable method))
       (let ((actions (append (reduce #'append bfs)
                              rest
                              (reduce #'append afs))))
@@ -59,7 +69,7 @@
  - :before (list) - run a sequence of functions before the route.
  - :route  (list) - the actual route or routing group.
  - :after  (list) - run a sequence of functions after the route."
-  (with-keys ((bfs "befores") (afs "after"))
+  (with-keys ((bfs "befores") (afs "afters"))
       stack
     (progn
       (setf bfs (append bfs (list (ensure-list (getf api :before nil))))
