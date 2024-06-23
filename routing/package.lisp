@@ -8,6 +8,12 @@
   (:import-from #:str
                 #:split
                 #:join)
+  (:import-from #:flexi-streams
+                #:make-flexi-stream)
+  (:import-from #:com.inuoe.jzon
+                #:parse)
+  (:import-from #:uiop
+		#:read-file-string)
   (:export
    #:any-route-handler
    #:route
@@ -20,7 +26,10 @@
    #:dispatch-route-by-name
    #:response
    #:not-found-response
-   #:internal-server-error-response))
+   #:internal-server-error-response
+   #:condition-handler
+   #:change-static-path
+   #:route-static))
 
 (in-package #:wst.routing)
 
@@ -203,8 +212,10 @@
     (t (err)
       (log:error "unhandled error ~a" err)
       (if *condition-handler*
-          (funcall *condition-handler* err)
-          (funcall #'internal-server-error-response request nil)))))
+          (let ((response (funcall *condition-handler* err)))
+            (if (not response)
+                (funcall #'internal-server-error-response request nil)
+                response))))))
 
 (defun dispatch-route (path method request)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."

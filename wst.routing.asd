@@ -2,7 +2,9 @@
   :depends-on (#:alexandria
                #:str
                #:cl-hash-util
-               #:serapeum
+               #:flexi-streams
+	       #:serapeum
+	       #:com.inuoe.jzon
                #:log4cl)
   :pathname "routing"
   :serial t
