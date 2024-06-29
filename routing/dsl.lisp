@@ -34,10 +34,10 @@
                              rest
                              (reduce #'append afs))))
         (any-route-handler
-         (lambda (request params)
-           (reduce (lambda (req fn) (funcall fn req params))
-                   actions
-                   :initial-value request)))))))
+         (lambda (request response)
+           (loop :for fn :in actions
+		 :do (funcall fn request response)
+		 :finally (return response))))))))
 
 (declaim (inline %create-route))
 (defun %create-route (api stack)
@@ -56,10 +56,10 @@
                        (reduce #'append afs))))
         (remove-route route-name)
         (add-route route-name the-path method
-                   (lambda (request params)
-                     (reduce (lambda (request fn) (funcall fn request params))
-                             actions
-                             :initial-value request)))))))
+                   (lambda (request response)
+		     (loop :for fn :in actions
+			   :do (funcall fn request response)
+			   :finally (return response))))))))
 
 (declaim (inline %wrap-routes))
 (defun %wrap-routes (api stack)
