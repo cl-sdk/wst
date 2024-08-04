@@ -29,11 +29,11 @@
       stack
     (destructuring-bind (method &rest rest)
         api
-      (declare (ignorable method))
       (let ((actions (append (reduce #'append bfs)
                              rest
                              (reduce #'append afs))))
         (any-route-handler
+	 method
          (lambda (request response)
            (loop :for fn :in actions
 		 :do (funcall fn request response)

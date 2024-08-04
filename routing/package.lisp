@@ -44,7 +44,11 @@
    #:unauthorized
    #:write-response
    #:bad-request
-   #:request))
+   #:request
+   #:redirect-see-other
+   #:request-content-type
+   #:request-content-length
+   #:woo-env->request))
 
 (in-package :wst.routing)
 
@@ -52,6 +56,8 @@
   method
   params
   headers
+  content-type
+  content-length
   content
   data)
 
@@ -66,7 +72,7 @@
 			 content
 			 (status 200)
 			 headers
-			 (content-type "text/html"))
+			 (content-type "text/html" content-type-boundp))
   (setf (response-status response) status
 	(response-headers response) (append (response-headers response)
 					    (list :content-type content-type)
@@ -80,11 +86,14 @@
   (:method ((ty t) response &key headers content)
     (write-response response :status 200 :headers headers :content content)))
 
+(Defun default-internal-server-error-resounse (response)
+  (write-response response :status 500 :content "internal server error"))
+
 (defgeneric internal-server-error-response (ty response &key)
   (:documentation "Build a response for a type TY (:json, :html, t = html).
  CONTENT is any object that is serialized accourding to the type.")
   (:method ((ty t) response &key)
-    (write-response response :status 500 :content "internal server error")))
+    (default-internal-server-error-resounse response)))
 
 (defgeneric not-found-response (ty response &key)
   (:documentation "Build a response for a type TY (:json, :html, t = html).
@@ -103,6 +112,13 @@
  CONTENT is any object that is serialized accourding to the type.")
   (:method ((ty t) response &key)
     (write-response response :status 400 :content "bad request")))
+
+(defgeneric redirect-see-other (ty response location &key)
+  (:documentation "Build a response for a type TY (:json, :html, t = html).
+ CONTENT is any object that is serialized accourding to the type.")
+  (:method ((ty t) response location &key)
+    (write-response response :status 303 :content "see-other"
+			     :headers (list :location location))))
 
 (defstruct route
   name
@@ -142,12 +158,12 @@
   "A user-defined function to handle conditions before
  calling the default internal server error.")
 
-(defun any-route-handler (fn)
+(defun any-route-handler (method fn)
   "Define FN as the function to handle conditions before
  calling the default internal server error."
   (setf *any-route-handler*
 	(make-route :name 'any-route
-		    :method nil
+		    :method method
 		    :path nil
 		    :matcher nil
 		    :dispatcher fn)))
@@ -189,13 +205,6 @@
   "Returns the REQUEST content as a json object."
   (parse (request-content-stream request)))
 
-(declaim (inline request-content-stream))
-(defun request-content-stream (request)
-  "Returns the REQUEST content as stream."
-  (make-flexi-stream
-   (getf request :raw-body (make-string-output-stream))
-   :external-format :utf-8))
-
 (defun change-static-path (path)
   "Change static files path to PATH."
   (setf *static-path* path))
@@ -216,7 +225,7 @@
 			   :method method
 			   :matcher (build-matcher path method)
 			   :dispatcher dispatcher)))
-    (setf *route-specs* (push route *route-specs*))))
+    (setf *route-specs* (append *route-specs* (list route)))))
 
 (defun remove-route (name)
   "Remove a route associate by NAME."
@@ -240,48 +249,78 @@
 				   (1 nil)
 				   (2 (cons (str:substring 1 (length x) x) y))))))))
 
-(defun match-route (path method)
+(defun do-matcher (r method segments count)
+  (let ((params (match (route-matcher r) method segments count)))
+    (when (not (equal params :skip))
+      (cons r params))))
+
+(defun match-route (path method &optional (routes *route-specs*))
   "Find a route by PATH and METHOD."
   (let* ((segments
-	   (remove-if (lambda (p) (or (null p)
-				(= 0 (length p))))
+	   (remove-if (lambda (p) (or (null p) (= 0 (length p))))
 		      (cdr (str:split "/" path))))
 	 (count (length segments)))
-    (loop :for r :in *route-specs*
-	  do (let ((params (match (route-matcher r) method segments count)))
-	       (when (not (equal params :skip))
-		 (return-from match-route (cons r params)))))))
+    (loop :for r :in routes
+	  :do (let ((params (do-matcher r method segments count)))
+		(when (not (equal params :skip))
+		  (return (cons r params)))))))
 
 (defun %dispatcher (route request response)
   "The dispatcher for any kind of dispatch. ROUTE-DATA is a pair of a route and the params and a request object."
   (handler-case
       (let* ((fn (route-dispatcher (or route
-				      *any-route-handler*
 				      *not-fount-route*)))
 	     (rs (funcall fn request response)))
-	(if (not rs)
-	    (funcall *not-fount-route* request rs)
-	    rs))
+	rs)
     (t (err)
       (log:error "unhandled error ~a" err)
       (if *condition-handler*
 	  (let ((rs (funcall *condition-handler* request response err)))
 	    (if (not rs)
-		(funcall #'internal-server-error-response request response)
+		(funcall #'default-internal-server-error-resounse response)
 		rs))
-	  (funcall #'internal-server-error-response request response)))))
+	  (funcall #'default-internal-server-error-resounse response)))))
+
+(defun parse-woo-request-cookies (cookies)
+  (reduce (lambda (cookies pair)
+	    (destructuring-bind (key value)
+		(str:split "=" pair)
+	      (setf (gethash key cookies) value)
+	      cookies))
+	  (cl-ppcre:split ";\\s?" cookies)
+	  :initial-value (make-hash-table)))
+
+(defun parse-woo-cookies (headers request response)
+  (let* ((cookies-string (gethash "cookie" headers
+				     (gethash "Cookie" headers "")))
+	 (cookies (parse-woo-request-cookies cookies-string)))
+    (setf (request-data request)
+	  (append (request-data request)
+		  (list :cookies cookies))
+	  (response-data response)
+	  (append (getf (response-data response) :cookies)
+		  (list :cookies nil)))))
+
+(defun woo-env->request (woo-request)
+  (let ((headers (getf woo-request :headers)))
+    (make-request :content (getf woo-request :raw-body)
+		  :headers headers
+		  :content-type (getf woo-request :content-type "text/html")
+		  :content-length (getf woo-request :content-length 0)
+		  :data (list :env woo-request)
+		  :method (getf woo-request :request-method))))
 
 (defun dispatch-route (path method woo-request)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
-  (let ((rq (make-request :content (request-content-stream woo-request)
-			  :headers (getf woo-request :headers)
-			  :data (list :env woo-request)
-			  :method method))
+  (let ((headers (getf woo-request :headers))
+	(rq (woo-env->request woo-request))
 	(rs (make-response :status 0
 			   :headers nil
 			   :content nil
 			   :data nil))
-	(found (match-route path method)))
+	(found (or (match-route path method)
+		  (match-route path method (list *any-route-handler*)))))
+    (parse-woo-cookies headers rq rs)
     (if (not found)
 	(%dispatcher nil rq rs)
 	(destructuring-bind (route . params)
@@ -293,15 +332,22 @@
 
 (defun dispatch-route-by-name (name woo-request &optional params)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
-  (let ((rq (make-request :content (request-content-stream woo-request)
-			  :headers (getf woo-request :headers)
-			  :data (list :env woo-request :params params)
-			  :method (getf woo-request :request-method)))
-	(rs (make-response :status 0
-			   :headers nil
-			   :content nil
-			   :data nil))
-	(r (find-if (lambda (route) (equal name (route-name route))) *route-specs*)))
+  (let* ((headers (getf woo-request :headers))
+	 (method (getf woo-request :request-method))
+	 (rq (make-request :content (getf woo-request :raw-body)
+			   :headers headers
+			   :content-type (getf woo-request :content-type "text/html")
+			   :content-length (getf woo-request :content-length 0)
+			   :data (list :env woo-request :params params)
+			   :method method))
+	 (rs (make-response :status 0
+			    :headers nil
+			    :content nil
+			    :data nil))
+	 (r (or (find-if (lambda (route) (equal name (route-name route))) *route-specs*)
+	       (and (eql method (route-method *any-route-handler*)) *any-route-handler*))))
+    (log:info *route-specs* r)
+    (parse-woo-cookies headers rq rs)
     (%dispatcher r rq rs)))
 
 (defun assert-request-method (method request)
@@ -326,12 +372,11 @@
      (remove-route ',name)
      (defun ,name (request response)
        (declare (ignorable request response))
-       (setf (response-headers response)
-	     (append (response-headers response)
-		     '(:content-type ,mime)))
-       (write-response response
-			     :status 200
-			     :headers (response-headers response)
-			     :content (read-file-string
-				       (concatenate 'string (namestring ,*static-path*) ,path))))
+       (let* ((serving (concatenate 'string (namestring ,*static-path*) ,path))
+	      (content (read-file-string serving)))
+	 (log:info serving content)
+	 (write-response response
+			 :status 200
+			 :content-type ,mime
+			 :content content)))
      (add-route ',name ,path :get #',name)))
