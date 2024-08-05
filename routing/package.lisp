@@ -47,25 +47,24 @@
    #:request
    #:redirect-see-other
    #:request-content-type
-   #:request-content-length
-   #:woo-env->request))
+   #:request-content-length))
 
 (in-package :wst.routing)
 
 (defstruct request
-  method
-  params
-  headers
-  content-type
-  content-length
+  (uri "" :type string)
+  (method :GET :type symbol)
+  (headers (cl-hash-util:hash-create nil) :type hash-table)
+  (content-type nil :type (or string null))
+  (content-length 0 :type integer)
   content
-  data)
+  (data nil :type list))
 
 (defstruct response
-  status
-  headers
-  content
-  data)
+  (status 0 :type integer)
+  (headers nil :type list)
+  (content "" :type string)
+  (data nil :type list))
 
 (defun write-response (response
 		       &key
@@ -86,7 +85,7 @@
   (:method ((ty t) response &key headers content)
     (write-response response :status 200 :headers headers :content content)))
 
-(Defun default-internal-server-error-resounse (response)
+(defun default-internal-server-error-resounse (response)
   (write-response response :status 500 :content "internal server error"))
 
 (defgeneric internal-server-error-response (ty response &key)
@@ -234,36 +233,36 @@
 		     (equal name (route-name route)))
 		   *route-specs*)))
 
+(declaim (ftype (function (matcher symbol list integer) list) match))
 (defun match (matcher method segments count)
   "Run the MATCHER for METHOD, SEGMENTS and COUNT."
   (if (or (not (= count (matcher-segments-count matcher)))
 	 (not (equal method (matcher-method matcher))))
-      :skip
-      (remove-if #'null
-		 (loop :for x :in (matcher-segments matcher)
-		       :for y :in segments
-		       collect (let ((param? (str:starts-with? ":" x)))
-				 (case (+ (bool->integer (equal x y))
-					  (* 2 (bool->integer param?)))
-				   (0 (return-from match :skip))
-				   (1 nil)
-				   (2 (cons (str:substring 1 (length x) x) y))))))))
+      (list :skip nil)
+      (list :params (loop :for x :in (matcher-segments matcher)
+			  :for y :in segments
+			  :if (str:starts-with? ":" x)
+			    :collect (cons (str:substring 1 (length x) x) y)
+			  :else :if (not (equal x y))
+			    :do (return-from match (list :skip nil))))))
 
-(defun do-matcher (r method segments count)
-  (let ((params (match (route-matcher r) method segments count)))
-    (when (not (equal params :skip))
-      (cons r params))))
+(declaim (ftype (function (route symbol list integer) list) do-matcher))
+(defun do-matcher (route method segments count)
+  (destructuring-bind (action params)
+      (match (route-matcher route) method segments count)
+    (when (equal action :params)
+      (cons route params))))
 
+(declaim (ftype (function (string symbol &optional list) list) match-route))
 (defun match-route (path method &optional (routes *route-specs*))
   "Find a route by PATH and METHOD."
   (let* ((segments
 	   (remove-if (lambda (p) (or (null p) (= 0 (length p))))
 		      (cdr (str:split "/" path))))
 	 (count (length segments)))
-    (loop :for r :in routes
-	  :do (let ((params (do-matcher r method segments count)))
-		(when (not (equal params :skip))
-		  (return (cons r params)))))))
+    (loop :for route :in routes
+	  :do (alexandria:when-let ((match-data (do-matcher route method segments count)))
+		(return match-data)))))
 
 (defun %dispatcher (route request response)
   "The dispatcher for any kind of dispatch. ROUTE-DATA is a pair of a route and the params and a request object."
@@ -281,7 +280,7 @@
 		rs))
 	  (funcall #'default-internal-server-error-resounse response)))))
 
-(defun parse-woo-request-cookies (cookies)
+(defun parse-request-cookies (cookies)
   (reduce (lambda (cookies pair)
 	    (destructuring-bind (key value)
 		(str:split "=" pair)
@@ -290,10 +289,10 @@
 	  (cl-ppcre:split ";\\s?" cookies)
 	  :initial-value (make-hash-table)))
 
-(defun parse-woo-cookies (headers request response)
+(defun parse-cookies (headers request response)
   (let* ((cookies-string (gethash "cookie" headers
-				     (gethash "Cookie" headers "")))
-	 (cookies (parse-woo-request-cookies cookies-string)))
+				  (gethash "Cookie" headers "")))
+	 (cookies (parse-request-cookies cookies-string)))
     (setf (request-data request)
 	  (append (request-data request)
 		  (list :cookies cookies))
@@ -301,54 +300,35 @@
 	  (append (getf (response-data response) :cookies)
 		  (list :cookies nil)))))
 
-(defun woo-env->request (woo-request)
-  (let ((headers (getf woo-request :headers)))
-    (make-request :content (getf woo-request :raw-body)
-		  :headers headers
-		  :content-type (getf woo-request :content-type "text/html")
-		  :content-length (getf woo-request :content-length 0)
-		  :data (list :env woo-request)
-		  :method (getf woo-request :request-method))))
-
-(defun dispatch-route (path method woo-request)
+(defun dispatch-route (request)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
-  (let ((headers (getf woo-request :headers))
-	(rq (woo-env->request woo-request))
-	(rs (make-response :status 0
-			   :headers nil
-			   :content nil
-			   :data nil))
-	(found (or (match-route path method)
-		  (match-route path method (list *any-route-handler*)))))
-    (parse-woo-cookies headers rq rs)
-    (if (not found)
-	(%dispatcher nil rq rs)
-	(destructuring-bind (route . params)
-	    found
-	  (progn
-	    (setf (request-data rq)
-		  (append (request-data rq) (list :params params)))
-	    (%dispatcher route rq rs))))))
+  (with-slots (method headers uri)
+      request
+      (let* ((response (make-response))
+	     (found (or (match-route uri method)
+		       (and *any-route-handler*
+			  (match-route uri method (list *any-route-handler*))))))
+	(parse-cookies headers request response)
+	(if (not found)
+	    (%dispatcher nil request response)
+	    (destructuring-bind (route . params)
+		found
+	      (progn
+		(setf (request-data request)
+		      (append (request-data request) (list :params params)))
+		(%dispatcher route request response)))))))
 
-(defun dispatch-route-by-name (name woo-request &optional params)
+(defun dispatch-route-by-name (name request &optional params)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
-  (let* ((headers (getf woo-request :headers))
-	 (method (getf woo-request :request-method))
-	 (rq (make-request :content (getf woo-request :raw-body)
-			   :headers headers
-			   :content-type (getf woo-request :content-type "text/html")
-			   :content-length (getf woo-request :content-length 0)
-			   :data (list :env woo-request :params params)
-			   :method method))
-	 (rs (make-response :status 0
-			    :headers nil
-			    :content nil
-			    :data nil))
-	 (r (or (find-if (lambda (route) (equal name (route-name route))) *route-specs*)
-	       (and (eql method (route-method *any-route-handler*)) *any-route-handler*))))
-    (log:info *route-specs* r)
-    (parse-woo-cookies headers rq rs)
-    (%dispatcher r rq rs)))
+  (with-slots (method headers)
+      request
+    (let* ((response (make-response))
+	   (route (or (find-if (lambda (route) (equal name (route-name route))) *route-specs*)
+		     (and (eql method (route-method *any-route-handler*)) *any-route-handler*))))
+      (log:info *route-specs* route)
+      (parse-cookies headers request response)
+      (setf (request-data request) (append (request-data request) (list :params params)))
+      (%dispatcher route request response))))
 
 (defun assert-request-method (method request)
   "Check if METHOD is in EVN."
@@ -361,7 +341,6 @@
   `(progn
      (remove-route ',name)
      (defun ,name ,args
-       (assert-request-method ,method ,(first args))
        ,@body)
      (add-route ',name ,path ,method #',name)))
 

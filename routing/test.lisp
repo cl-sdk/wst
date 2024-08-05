@@ -25,21 +25,21 @@
   (5am:is-true (fboundp 'test-route)))
 
 (5am:def-test test-route-should-respond-when-dispatched ()
-  (let ((rs (dispatch-route "/testing-route"
-			    :get
-			    '(:request-method :get))))
-    (5am:is (equal "ok"
-		   (response-content rs)))))
+  (let ((rs (dispatch-route (wst.routing:make-request :uri "/testing-route"
+						      :method :get))))
+    (5am:is (equal "ok" (response-content rs)))))
 
 (5am:def-test test-route-should-respond-with-404-when-dispatched-with-wrong-method ()
-  (let ((response (dispatch-route "/aaaaa" :get '(:request-method :post))))
+  (let ((response (dispatch-route (wst.routing:make-request :uri "/"
+							    :method :POST))))
     (5am:is (equal "not found" (response-content response)))))
 
 (5am:def-test removing-test-route ()
   (add-route 'to-be-remove "/to-be-removed" :get (lambda (a b) t))
   (remove-route 'to-be-remove)
-  (let ((rs (dispatch-route "/to-be-removed" :get nil)))
-   (5am:is (equal "not found" (response-content rs)))))
+  (let ((rs (dispatch-route (wst.routing:make-request :uri "/to-be-removed"
+						      :method :get))))
+    (5am:is (equal "not found" (response-content rs)))))
 
 (5am:def-test allow-parameters-on-path ()
   (add-route 'route-with-id
@@ -48,17 +48,19 @@
 	     (lambda (request r)
 	       (declare (ignore r))
 	       (getf (wst.routing:request-data request) :params)))
-  (let ((params (dispatch-route "/r/6" :get nil)))
-    (5am:is (equalp '(("id" . "6")) params)))
+  (let* ((request (make-request :uri "/r/6" :method :get))
+	 (params (dispatch-route request)))
+    (5am:is (equalp '(("id" . "6")) (getf (wst.routing:request-data request) :params))))
   (remove-route 'route-with-id))
 
 (5am:def-test return-internal-server-error-if-exception-is-thrown ()
   (add-route 'throw-exception "/throw-exception" :get (lambda (request response)
 							(declare (ignorable request response))
 							(error "something bad happened.")))
-  (let ((rs (dispatch-route "/throw-exception" :get nil)))
-   (5am:is (equal "internal server error" (response-content rs))))
-  (remove-route 'throw-exception))
+  (let ((rs (dispatch-route (wst.routing:make-request :uri "/throw-exception"
+						      :method :GET))))
+    (5am:is (equal "internal server error" (response-content rs)))
+    (remove-route 'throw-exception)))
 
 (defun the-function (request response)
   (declare (ignore request response))
@@ -68,7 +70,7 @@
   (setf wst.routing::*route-specs* nil)
   (wst.routing.dsl:build-webserver
    `(wst.routing.dsl:route :get index "/" the-function))
-  (wst.routing:dispatch-route-by-name 'index '(:request-method :get)))
+  (wst.routing:dispatch-route-by-name 'index (make-request :method :GET)))
 
 (5am:def-test build-with-just-route-is-the-same-of-just-route-using-the-dsl ()
   (setf wst.routing::*route-specs* nil)
@@ -79,7 +81,7 @@
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:wrap
        :route (wst.routing.dsl:route :get index "/" ,must-be-called)))
-    (wst.routing:dispatch-route-by-name 'index '(:request-method :get))
+    (wst.routing:dispatch-route-by-name 'index (make-request :method :GET))
     (5am:is (= 1 count))))
 
 (5am:def-test build-route-with-just-before ()
@@ -92,7 +94,7 @@
      `(wst.routing.dsl:wrap
        :before ,must-be-called
        :route (wst.routing.dsl:route :get index "/" ,must-be-called)))
-    (wst.routing:dispatch-route-by-name 'index '(:request-method :get))
+    (wst.routing:dispatch-route-by-name 'index (make-request :method :GET))
     (5am:is (= 2 count))))
 
 (5am:def-test build-route-with-just-after ()
@@ -105,7 +107,7 @@
      `(wst.routing.dsl:wrap
        :route (wst.routing.dsl:route :get index "/" ,must-be-called)
        :after ,must-be-called))
-    (wst.routing:dispatch-route-by-name 'index '(:request-method :get))
+    (wst.routing:dispatch-route-by-name 'index (make-request :method :GET))
     (5am:is (= 2 count))))
 
 (5am:def-test build-a-route-wrapped-using-the-dsl ()
@@ -119,7 +121,7 @@
        :before ,must-be-called
        :route (wst.routing.dsl:route :get index "/" ,must-be-called)
        :after ,must-be-called))
-    (wst.routing:dispatch-route-by-name 'index '(:request-method :get))
+    (wst.routing:dispatch-route-by-name 'index (make-request :method :GET))
     (5am:is (= 3 count))))
 
 (5am:def-test build-group-of-routes-using-the-dsl ()
@@ -132,8 +134,8 @@
      `(wst.routing.dsl:group
        (wst.routing.dsl:route :get route-a "/a" ,must-be-called)
        (wst.routing.dsl:route :get route-b "/b" ,must-be-called)))
-    (wst.routing:dispatch-route-by-name 'route-a '(:request-method :get))
-    (wst.routing:dispatch-route-by-name 'route-b '(:request-method :get))
+    (wst.routing:dispatch-route-by-name 'route-a (make-request :method :GET))
+    (wst.routing:dispatch-route-by-name 'route-b (make-request :method :GET))
     (5am:is (= 2 count))))
 
 (5am:def-test build-a-resource-routes-using-the-dsl ()
@@ -146,6 +148,6 @@
      `(wst.routing.dsl:resource "/base"
        (wst.routing.dsl:route :get route-a "/a" ,must-be-called)
        (wst.routing.dsl:route :get route-b ,must-be-called)))
-    (wst.routing:dispatch-route "/base/a" :get '(:request-method :get))
-    (wst.routing:dispatch-route "/base" :get '(:request-method :get))
+    (wst.routing:dispatch-route (make-request :uri "/base/a" :method :GET))
+    (wst.routing:dispatch-route (make-request :uri "/base" :method :GET))
     (5am:is (= 2 count))))
