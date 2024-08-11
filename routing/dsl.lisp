@@ -1,18 +1,18 @@
 (defpackage #:wst.routing.dsl
   (:use #:cl)
   (:import-from #:cl-hash-util
-                #:hash
-                #:with-keys)
+		#:hash
+		#:with-keys)
   (:import-from #:wst.routing
-                #:any-route-handler)
+		#:any-route-handler)
   (:import-from #:alexandria
-                #:ensure-list)
+		#:ensure-list)
   (:import-from #:wst.routing
-                #:add-route)
+		#:add-route)
   (:import-from #:wst.routing
-                #:remove-route)
+		#:remove-route)
   (:import-from #:str
-                #:join)
+		#:join)
   (:export
    #:build-webserver
    #:wrap
@@ -23,45 +23,42 @@
 
 (in-package #:wst.routing.dsl)
 
-(declaim (inline %any-route))
 (defun %any-route (api stack)
   (with-keys ((bfs "befores") (paths "paths") (afs "afters"))
       stack
     (destructuring-bind (method &rest rest)
-        api
+api
       (let ((actions (append (reduce #'append bfs)
-                             rest
-                             (reduce #'append afs))))
-        (any-route-handler
+			     rest
+			     (reduce #'append afs))))
+	(any-route-handler
 	 method
-         (lambda (request response)
-           (loop :for fn :in actions
+	 (lambda (request response)
+	   (loop :for fn :in actions
 		 :do (funcall fn request response)
 		 :finally (return response))))))))
 
-(declaim (inline %create-route))
 (defun %create-route (api stack)
   "Execute `route` is found take the API and build with the STACK."
   (with-keys ((bfs "befores") (paths "paths") (afs "afters"))
       stack
     (destructuring-bind (method route-name path &rest rest)
-        api
+api
       (let* ((onstack (join "" paths))
-             (route-path (if (stringp path) path ""))
-             (the-path (concatenate 'string onstack route-path))
-             (the-action (if (not (stringp path)) path (car rest)))
-             (actions (append
-                       (reduce #'append bfs)
-                       (ensure-list the-action)
-                       (reduce #'append afs))))
-        (remove-route route-name)
-        (add-route route-name the-path method
-                   (lambda (request response)
+	     (route-path (if (stringp path) path ""))
+	     (the-path (concatenate 'string onstack route-path))
+	     (the-action (if (not (stringp path)) path (car rest)))
+	     (actions (append
+		       (reduce #'append bfs)
+		       (ensure-list the-action)
+		       (reduce #'append afs))))
+	(remove-route route-name)
+	(add-route route-name the-path method
+		   (lambda (request response)
 		     (loop :for fn :in actions
 			   :do (funcall fn request response)
 			   :finally (return response))))))))
 
-(declaim (inline %wrap-routes))
 (defun %wrap-routes (api stack)
   "Execute when `wrap is found.
  The API can have keys:
@@ -73,28 +70,27 @@
       stack
     (progn
       (setf bfs (append bfs (list (ensure-list (getf api :before nil))))
-            afs (append afs (list (ensure-list (getf api :after nil)))))
+afs (append afs (list (ensure-list (getf api :after nil)))))
       (%build-webserver (getf api :route) stack)
       (setf bfs (butlast bfs)
-            afs (butlast afs)))))
+	    afs (butlast afs)))))
 
-(declaim (inline %build-webserver))
 (defun %build-webserver (api stack)
   "Build from a API definition"
   (let ((item (car api))
-        (routes (cdr api)))
+(routes (cdr api)))
     (case item
       (wrap (%wrap-routes routes stack))
       (any-route (%any-route routes stack))
       (route (%create-route routes stack))
       (group (map nil (lambda (api) (%build-webserver api stack)) routes))
       (resource (destructuring-bind (path &rest rest)
-                    (cdr api)
-                  (setf (gethash "paths" stack)
-                        (append (gethash "paths" stack) (list path)))
-                  (map nil (lambda (item) (%build-webserver item stack)) rest)
-                  (setf (gethash "paths" stack)
-                        (butlast (gethash "paths" stack)))))
+		    (cdr api)
+		  (setf (gethash "paths" stack)
+			(append (gethash "paths" stack) (list path)))
+		  (map nil (lambda (item) (%build-webserver item stack)) rest)
+		  (setf (gethash "paths" stack)
+			(butlast (gethash "paths" stack)))))
       (t (error (format nil "not handled ~a" item))))))
 
 (defun build-webserver (api)

@@ -1,11 +1,14 @@
 (asdf:defsystem #:wst.routing
   :depends-on (#:alexandria
-               #:str
-               #:cl-hash-util
-               #:flexi-streams
+	       #:str
+	       #:cl-hash-util
+	       #:flexi-streams
 	       #:serapeum
 	       #:com.inuoe.jzon
-               #:log4cl)
+	       #:log4cl)
   :pathname "routing"
   :serial t
-  :components ((:file "package")))
+  :components ((:file "package")
+	       (:file "responses")
+	       (:file "routes")
+	       (:file "static")))
