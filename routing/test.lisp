@@ -3,10 +3,12 @@
   (:import-from #:cl-hash-util
 		#:hash-create)
   (:import-from #:wst.routing
+		#:response-headers
+		#:write-response
+		#:ok-response
 		#:dispatch-route-by-name
 		#:response-data
 		#:response-content
-		#:success-response
 		#:make-request
 		#:add-route
 		#:remove-route
@@ -20,7 +22,7 @@
 
 (route test-route :GET "/testing-route" (request response)
   (declare (ignorable request))
-  (success-response t response :content "ok"))
+  (ok-response t response :content "ok"))
 
 (5am:def-test route-was-compiled ()
   (5am:is-true (fboundp 'test-route)))
@@ -249,4 +251,70 @@
     (dispatch-route-by-name 'a (wst.routing:make-request :uri "/a"
 							 :method :POST))
     (5am:is (= count 0))
+    (setf wst.routing::*any-route-handler* nil)))
+
+(5am:def-test respond-with-internal-server-error ()
+  (wst.routing:any-route-handler :GET (lambda (request response)
+					(declare (ignorable request))
+					(wst.routing:internal-server-error-response t response)
+					response))
+  (5am:is (= 500 (wst.routing:response-status
+		  (dispatch-route-by-name 'a (wst.routing:make-request :uri "/" :method :GET)))))
+  (setf wst.routing::*any-route-handler* nil))
+
+(5am:def-test respond-with-unauthorized ()
+  (wst.routing:any-route-handler :GET (lambda (request response)
+					(declare (ignorable request))
+					(wst.routing:unauthorized-response t response)
+					response))
+  (5am:is (= 401 (wst.routing:response-status
+		  (dispatch-route-by-name 'a (wst.routing:make-request :uri "/" :method :GET)))))
+  (setf wst.routing::*any-route-handler* nil))
+
+(5am:def-test respond-with-forbidden ()
+  (wst.routing:any-route-handler :GET (lambda (request response)
+					(declare (ignorable request))
+					(wst.routing:forbidden-response t response)
+					response))
+  (5am:is (= 403 (wst.routing:response-status
+		  (dispatch-route-by-name 'a (wst.routing:make-request :uri "/" :method :GET)))))
+  (setf wst.routing::*any-route-handler* nil))
+
+(5am:def-test respond-with-bad-request ()
+  (wst.routing:any-route-handler :GET (lambda (request response)
+					(declare (ignorable request))
+					(wst.routing:bad-request-response t response)
+					response))
+  (5am:is (= 400 (wst.routing:response-status
+		  (dispatch-route-by-name 'a (wst.routing:make-request :uri "/" :method :GET)))))
+  (setf wst.routing::*any-route-handler* nil))
+
+(5am:def-test respond-with-redirect-see-other ()
+  (wst.routing:any-route-handler :GET (lambda (request response)
+					(declare (ignorable request))
+					(wst.routing:redirect-see-other-response t response "/redirect")
+					response))
+  (let ((rs (dispatch-route-by-name 'a (wst.routing:make-request :uri "/" :method :GET))))
+    (5am:is (= 303 (wst.routing:response-status rs)))
+    (5am:is (string-equal (getf (wst.routing:response-headers rs) :location)
+			  "/redirect"))
+    (setf wst.routing::*any-route-handler* nil)))
+
+(defmethod wst.routing:ok-response ((ty (eql :sexp)) response &key headers content)
+  (declare (ignorable headers))
+  (write-response response :status 200
+			   :content-type "application/s-expression"
+			   :headers headers
+			   :content (format nil "~a" content)))
+
+(5am:def-test respond-with-custom-responder ()
+  (wst.routing:any-route-handler :GET (lambda (request response)
+					(declare (ignorable request))
+					(ok-response :sexp response :content (list 1 2 3))
+					response))
+  (let ((rs (dispatch-route-by-name 'a (wst.routing:make-request :uri "/" :method :GET))))
+    (5am:is (= 200 (wst.routing:response-status rs)))
+    (5am:is (string-equal (getf (response-headers rs) :content-type)
+			  "application/s-expression"))
+    (5am:is (equal (response-content rs) "(1 2 3)"))
     (setf wst.routing::*any-route-handler* nil)))

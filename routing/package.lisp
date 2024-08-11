@@ -1,6 +1,7 @@
 (defpackage #:wst.routing
   (:use #:cl)
   (:import-from #:cl-hash-util
+		#:hash-create
 		#:hash
 		#:with-keys)
   (:import-from #:alexandria
@@ -15,41 +16,36 @@
   (:import-from #:uiop
 		#:read-file-string)
   (:export
-   #:any-route-handler
-   #:route
-   #:matcher
-   #:request-json-content
-   #:request-content-stream
-   #:add-route
-   #:remove-route
+   #:request
+   #:response
    #:dispatch-route
    #:dispatch-route-by-name
-   #:response
-   #:not-found-response
-   #:internal-server-error-response
+   #:route
+   #:find-route-by-name
+   #:remove-route
+   #:add-route
    #:condition-handler
-   #:change-static-path
-   #:route-static
+   #:any-route-handler
+   #:ok-response
+   #:internal-server-error-response
+   #:not-found-response
+   #:forbidden-response
+   #:unauthorized-response
+   #:bad-request-response
+   #:redirect-see-other-response
+   #:make-request
+   #:make-response
+   #:request-data
+   #:request-uri
    #:request-method
    #:request-headers
    #:request-content
-   #:request-data
+   #:request-content-type
    #:response-status
    #:response-headers
    #:response-content
    #:response-data
-   #:make-request
-   #:make-response
-   #:success-response
-   #:unauthorized
-   #:write-response
-   #:bad-request
-   #:request
-   #:redirect-see-other
-   #:request-content-type
-   #:request-content-length
-   #:find-route-by-name
-   #:forbidden-response))
+   #:request-content-length))
 
 (in-package :wst.routing)
 
@@ -57,7 +53,7 @@
   "Request object."
   (uri "" :type string)
   (method :GET :type symbol)
-  (headers (cl-hash-util:hash-create nil) :type hash-table)
+  (headers (hash-create nil) :type hash-table)
   (content-type nil :type (or string null))
   (content-length 0 :type integer)
   content
