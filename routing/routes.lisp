@@ -72,6 +72,14 @@
     (setf *routes* (append *routes* (list route)))
     t))
 
+(defun parse-uri (uri)
+  (let* ((hash-position (or (position #\# uri) (length uri)))
+	 (query-position (or (position #\? uri) hash-position)))
+    (let ((path (str:substring 0 query-position uri))
+	  (query (str:substring (1+ query-position) hash-position uri))
+	  (hash (str:substring (1+ hash-position) (length uri) uri)))
+      (values path query hash))))
+
 (declaim (ftype (function (symbol) t)
 		remove-route))
 (defun remove-route (name)

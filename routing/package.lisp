@@ -47,7 +47,8 @@
    #:response-data
    #:request-content-length
    #:write-response
-   #:unprocessable-entity))
+   #:unprocessable-entity
+   #:parse-uri))
 
 (in-package :wst.routing)
 
