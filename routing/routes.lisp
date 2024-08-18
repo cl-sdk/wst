@@ -163,12 +163,8 @@
 	rs)
     (t (err)
       (log:error "unhandled error ~a" err)
-      (if *condition-handler*
-	  (let ((rs (funcall *condition-handler* request response err)))
-	    (if (not rs)
-		(funcall #'default-internal-server-error-resounse response)
-		rs))
-	  (funcall #'default-internal-server-error-resounse response)))))
+      (or (and *condition-handler* (funcall *condition-handler* request response err))
+         (funcall #'default-internal-server-error-resounse response)))))
 
 (defun dispatch-route (request)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
