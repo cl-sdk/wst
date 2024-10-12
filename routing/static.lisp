@@ -16,7 +16,6 @@
        (declare (ignorable request response))
        (let* ((serving (concatenate 'string (namestring ,*static-path*) ,path))
 	      (content (read-file-string serving)))
-	 (log:info serving content)
 	 (write-response response
 			 :status 200
 			 :content-type ,mime

@@ -10,8 +10,6 @@
   (when coverage
     (sb-cover:report #P"./coverage/")))
 
-(log:config :off)
-
 (setf *debugger-hook*
       (lambda (c h)
 	(declare (ignore c h))
