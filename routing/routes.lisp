@@ -99,7 +99,7 @@
               (setf (gethash key cookies) value)
               cookies))
           (cl-ppcre:split ";\\s?" cookies)
-          :initial-value (make-hash-table)))
+          :initial-value (make-hash-table :test 'equal)))
 
 (declaim (ftype (function (hash-table request response) t)
                 parse-cookies))

@@ -26,7 +26,7 @@
   (let ((ref (gensym "DATA")))
     `(let* ((,ref (request-data ,request))
             ,@(mapcar (lambda (item)
-                        (list (intern (string-upcase (string item)))
+                        (list item
                               `(getf ,ref ,(intern (string item) :keyword))))
                       keys))
        ,@body)))
@@ -35,7 +35,7 @@
   (let ((ref (gensym "DATA")))
     `(let* ((,ref (response-data ,response))
             ,@(mapcar (lambda (item)
-                        (list (intern (string-upcase (string item)))
+                        (list item
                               `(getf ,ref ,(intern (string item) :keyword))))
                       keys))
        ,@body)))

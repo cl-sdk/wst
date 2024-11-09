@@ -1,16 +1,16 @@
 (in-package :wst.routing)
 
 (defun write-response (response
-		       &key
-			 content
-			 status
-			 headers
-			 (content-type "text/html"))
+                       &key
+                         content
+                         status
+                         headers
+                         (content-type "text/html"))
   (setf (response-status response) status
-	(response-headers response) (append (response-headers response)
-					    (list :content-type content-type)
-					    headers)
-	(response-content response) content)
+        (response-headers response) (append (response-headers response)
+                                            (list :content-type content-type)
+                                            headers)
+        (response-content response) content)
   response)
 
 (defun default-internal-server-error-resounse (response)
@@ -22,12 +22,13 @@
   (:method ((ty t) response &key headers content)
     (write-response response :status 200 :headers headers :content content)))
 
-(defgeneric internal-server-error-response (ty response &key headers)
+(defgeneric internal-server-error-response (ty response &key headers content)
   (:documentation "Build a response for a type TY (:json, :html, t = html).
  CONTENT is any object that is serialized accourding to the type.")
-  (:method ((ty t) response &key headers)
-    (declare (ignorable headers))
-    (default-internal-server-error-resounse response)))
+  (:method ((ty t) response &key headers content)
+    (if content
+        (write-response response :status 500 :content content :headers headers)
+        (default-internal-server-error-resounse response))))
 
 (defgeneric not-found-response (ty response &key)
   (:documentation "Build a response for a type TY (:json, :html, t = html).
@@ -58,7 +59,7 @@
  CONTENT is any object that is serialized accourding to the type.")
   (:method ((ty t) response location &key)
     (write-response response :status 303 :content "see-other"
-			     :headers (list :location location))))
+                             :headers (list :location location))))
 
 (defgeneric unprocessable-entity (ty response &key)
   (:documentation "Build a response for a type TY (:json, :html, t = html).
