@@ -190,11 +190,12 @@
        ,@body)
      (add-route ',name ,path ,method #',name)))
 
-(defun route-uri-of (route &optional args)
+(defun route-uri-of (route &optional args &key query)
   "Generate the uri of a ROUTE applying ARGS as parameters."
   (concatenate 'string "/"
                (str:join "/" (loop :for segment :in (matcher-segments (route-matcher route))
                                    :if (char-equal #\: (aref segment 0))
                                      :collect (format nil "~a" (pop args))
                                    :else
-                                     :collect segment))))
+                                     :collect segment))
+               (if query (concatenate 'string "?" query) "")))
