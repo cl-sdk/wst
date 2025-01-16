@@ -66,3 +66,9 @@
  CONTENT is any object that is serialized accourding to the type.")
   (:method ((ty t) response &key)
     (write-response response :status 422 :content "unprocessable entity")))
+
+(defgeneric not-implemented (ty response &key)
+  (:documentation "Build a response for a type TY (:json, :html, t = html).
+ CONTENT is any object that is serialized accourding to the type.")
+  (:method ((ty t) response &key)
+    (write-response response :status 501 :content "not implemented")))

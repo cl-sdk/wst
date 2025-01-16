@@ -55,6 +55,7 @@
    #:route-path
    #:with-request-params
    #:with-response-data
-   #:with-request-data))
+   #:with-request-data
+   #:not-implemented))
 
 (in-package :wst.routing)
