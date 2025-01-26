@@ -148,7 +148,7 @@
               found
             (progn
               (setf (request-data request)
-                    (append (request-data request) (list :params params)))
+                    (append (request-data request) (list :route route :params params)))
               (%dispatcher route request response)))))))
 
 (defun dispatch-route-by-name (name request &optional old-params)
