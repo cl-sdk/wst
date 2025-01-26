@@ -1,4 +1,4 @@
-(asdf:defsystem #:wst.web-server.woo
+(asdf:defsystem #:wst.routing.woo
   :pathname "web-server"
   :serial t
   :components ((:file "woo")))

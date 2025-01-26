@@ -1,4 +1,4 @@
-(asdf:defsystem #:wst.web-server.session-csrf
+(asdf:defsystem #:wst.session.csrf
   :pathname "web-server"
   :serial t
   :components ((:file "session-csrf")))

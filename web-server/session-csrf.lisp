@@ -1,4 +1,4 @@
-(defpackage #:wst.web-server.session-csrf
+(defpackage #:wst.session.csrf
   (:use #:cl)
   (:export
    #:session-csrf-token
@@ -6,7 +6,7 @@
    #:remove-session-csrf-token
    #:verify-session-csrf-token))
 
-(in-package :wst.web-server.session-csrf)
+(in-package :wst.session.csrf)
 
 (defgeneric session-csrf-token (obj &key &allow-other-keys))
 (defgeneric add-session-csrf-token (obj key &key &allow-other-keys))
