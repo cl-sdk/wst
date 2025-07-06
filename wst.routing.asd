@@ -1,4 +1,7 @@
 (asdf:defsystem #:wst.routing
+  :author "Bruno Dias"
+  :license "Unlicense"
+  :version "0.0.1"
   :depends-on (#:alexandria
                #:str
                #:cl-hash-util

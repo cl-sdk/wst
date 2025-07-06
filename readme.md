@@ -24,10 +24,10 @@ Main system. Manages the routes used in a application.
 
 #### wst.routing.dsl
 
-A dsl to build passes (filters and middlewares).
+A DSL to build filters and middlewares.
 
 ```lisp
-(defparameter authentication 
+(defparameter authentication
   `(wrap
     :before check-if-user-already-authenticated
     :route (group
@@ -46,7 +46,7 @@ A dsl to build passes (filters and middlewares).
     (route :DELETE delete-user "/user/:user-id" delete-user-responder)
     (route :GET list-account-users "/users" list-account-users-responder)))
 
-(defparameter groups 
+(defparameter groups
   `(group
     (wrap
      :before add-session-csrf
