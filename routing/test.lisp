@@ -21,7 +21,7 @@
 
 (5am:def-suite* wst.routing.suite)
 
-(route test-route :GET "/testing-route" (request response)
+(wst.routing:route test-route :GET "/testing-route" (request response)
   (declare (ignorable request))
   (ok-response t response :content "ok"))
 
