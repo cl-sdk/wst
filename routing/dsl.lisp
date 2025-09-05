@@ -39,7 +39,15 @@
                  :finally (return response))))))))
 
 (defun %create-route (api stack)
-  "Execute `route` is found take the API and build with the STACK."
+  "Execute `route` is found take the API and build with the STACK.
+
+ (route method name path responder :custom data)
+
+ If route is inside of a resource,
+ the route will be defined on the resource.
+
+ (resource path
+   (route method name responder :custom data))"
   (with-keys ((bfs "befores") (paths "paths") (afs "afters"))
       stack
     (destructuring-bind (method route-name path &rest rest)
@@ -57,7 +65,8 @@
                    (lambda (request response)
                      (loop :for fn :in actions
                            :do (funcall fn request response)
-                           :finally (return response))))))))
+                           :finally (return response)))
+                   (cdr (member :custom rest)))))))
 
 (defun %wrap-routes (api stack)
   "Execute when `wrap is found.

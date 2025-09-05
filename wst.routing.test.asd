@@ -7,7 +7,8 @@
                #:cl-hash-util
                #:fiveam
                #:wst.routing
-               #:wst.routing.dsl)
+               #:wst.routing.dsl
+               #:wst.routing.woo)
   :pathname "routing"
   :serial t
   :components ((:file "test")))

@@ -1,13 +1,30 @@
 (in-package :wst.routing)
 
 (defstruct route
+  "A Route object consists of:
+
+ - A NAME of the route
+ - The expected METHOD
+ - Its PATH
+ - A compiled Matcher
+ - DATA holds information of parametrized routes
+ - CUSTOM used by other components
+ - DISPATCHER function"
   name
   method
   path
   matcher
+  data
+  custom
   dispatcher)
 
 (defstruct matcher
+  "Matcher is the cached object that will hold the information
+ to perform a matcher on a path.
+
+ - METHOD that the route expects
+ - SEGMENTS-COUNT is a easy skip in case of mismatch
+ - SEGMENTS is each component of the path slice on `/`"
   method
   segments-count
   segments)
@@ -18,7 +35,8 @@
               :method nil
               :matcher nil
               :dispatcher #'not-found-response)
-  "Route to be executed for not found.")
+  "Route to be executed for 'not found'.
+ Default is `wst.routing:not-found-response`.")
 
 (defvar *internal-error-route*
   (make-route :name 'internal-error
@@ -26,7 +44,8 @@
               :method nil
               :matcher nil
               :dispatcher #'internal-server-error-response)
-  "Route to be executed for internal server error.")
+  "Route to be executed for 'internal server error'.
+ Default is `wst.routing:internal-server-error-response`.")
 
 (defparameter *condition-handler* nil
   "A user-defined function to handle conditions before
@@ -92,15 +111,16 @@
                   :segments-count (length segments)
                   :segments segments)))
 
-(declaim (ftype (function (symbol string symbol function) t)
+(declaim (ftype (function (symbol string symbol function &optional list) t)
                 add-route))
-(defun add-route (name path method dispatcher)
+(defun add-route (name path method dispatcher &optional custom)
   "Add a new route associating a NAME, PATH and METHOD to a DISPATCHER."
   (let ((route (make-route :name name
                            :path path
                            :method method
                            :matcher (build-matcher path method)
-                           :dispatcher dispatcher)))
+                           :dispatcher dispatcher
+                           :custom custom)))
     (setf *routes* (append *routes* (list route)))
     t))
 
@@ -154,7 +174,8 @@
     (find-if (lambda (route) (string-equal sname (symbol-name (route-name route)))) routes)))
 
 (defun %dispatcher (route request response)
-  "The dispatcher for any kind of dispatch. ROUTE-DATA is a pair of a route and the params and a request object."
+  "The dispatcher for any kind of dispatch.
+ ROUTE-DATA is a pair of a route and the params and a request object."
   (handler-case
       (let* ((fn (route-dispatcher (or route
                                       *not-fount-route*)))
