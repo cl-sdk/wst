@@ -23,6 +23,7 @@
   "Hash to hold all routes.")
 
 (defmacro with-request-data (keys request &body body)
+  "Put values from KEYS from the REQUEST data in scope."
   (let ((ref (gensym "DATA")))
     `(let* ((,ref (request-data ,request))
             ,@(mapcar (lambda (item)
@@ -32,6 +33,7 @@
        ,@body)))
 
 (defmacro with-response-data (keys response &body body)
+  "Put values from KEYS from the RESPONSE data in scope."
   (let ((ref (gensym "DATA")))
     `(let* ((,ref (response-data ,response))
             ,@(mapcar (lambda (item)
