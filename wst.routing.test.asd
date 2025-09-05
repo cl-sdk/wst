@@ -9,6 +9,6 @@
                #:wst.routing
                #:wst.routing.dsl
                #:wst.routing.woo)
-  :pathname "routing"
+  :pathname "t"
   :serial t
-  :components ((:file "test")))
+  :components ((:file "package")))
