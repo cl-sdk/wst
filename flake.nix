@@ -5,20 +5,24 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-23.11";
   };
 
-  outputs = { self, nixpkgs }:
-    let
-      system = "aarch64-darwin";
-      pkgs = import nixpkgs { inherit system; };
-    in {
+  outputs = { self, nixpkgs, flake-utils }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+      in {
 
-      packages.${system} = {
-        inputs = [pkgs.lispPackages.quicklisp];
-        default = pkgs.sbcl;
-      };
+        packages.${system} = {
+          inputs = [pkgs.lispPackages.quicklisp];
+          default = pkgs.mkShell {
+            name = "wst";
+            buildInputs = [pkgs.sbcl];
+          };
+        };
 
-      shellHooks = """
-    EDITOR=emacs
-""";
-
-    };
+        devShell = pkgs.mkShell {
+          inputs = [pkgs.lispPackages.quicklisp];
+            name = "wst";
+            buildInputs = [pkgs.sbcl];
+        };
+      });
 }
