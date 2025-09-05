@@ -16,6 +16,12 @@
 (defun default-internal-server-error-resounse (response)
   (write-response response :status 500 :content "internal server error"))
 
+(defgeneric created-response (ty response &key headers)
+  (:documentation "Build a response for a type TY (:json, :html, t = html).
+ CONTENT is any object that is serialized accourding to the type.")
+  (:method ((ty t) response &key headers)
+    (write-response response :status 201 :headers headers :content "")))
+
 (defgeneric ok-response (ty response &key headers content)
   (:documentation "Build a response for a type TY (:json, :html, t = html).
  CONTENT is any object that is serialized accourding to the type.")
