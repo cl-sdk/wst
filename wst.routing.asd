@@ -13,5 +13,4 @@
   :components ((:file "package")
                (:file "types")
                (:file "responses")
-               (:file "routes")
-               (:file "static")))
+               (:file "routes")))

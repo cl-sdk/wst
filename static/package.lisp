@@ -1,4 +1,10 @@
-(in-package :wst.routing)
+(defpackage #:wst.routing.static
+  (:use #:cl)
+  (:export
+   #:change-static-path
+   #:route-static))
+
+(in-package :wst.routing.static)
 
 (defparameter *static-path* *default-pathname-defaults*
   "Path to find all static files.")
@@ -15,9 +21,9 @@
      (defun ,name (request response)
        (declare (ignorable request response))
        (let* ((serving (concatenate 'string (namestring ,*static-path*) ,path))
-	      (content (read-file-string serving)))
-	 (write-response response
-			 :status 200
-			 :content-type ,mime
-			 :content content)))
+              (content (read-file-string serving)))
+         (write-response response
+                         :status 200
+                         :content-type ,mime
+                         :content content)))
      (add-route ',name ,path :get #',name)))
