@@ -362,3 +362,83 @@
       (5am:is (string-equal uri "/"))
       (5am:is (string-equal query-string "ok=1"))
       (5am:is (string-equal hash "anchor")))))
+
+(defpackage #:wst.routing.response.dsl.test
+  (:use #:cl))
+
+(in-package :wst.routing.response.dsl.test)
+
+(5am:def-suite wst.routing.response.dsl.suite)
+
+(5am:in-suite wst.routing.response.dsl.suite)
+
+(5am:def-test set-no-headers-on-response-headers ()
+  (let ((target (wst.routing:make-response)))
+    (wst.routing.response.dsl:headers nil target)
+    (5am:is-true (null (wst.routing:response-headers target)))))
+
+(5am:def-test set-a-single-header-on-response-headers ()
+  (let ((target (wst.routing:make-response))
+        (headers (list :content-type "mimetype")))
+    (wst.routing.response.dsl:headers headers target)
+    (5am:is-true (string-equal (getf (wst.routing:response-headers target)
+                                     :content-type)
+                               "mimetype"))))
+
+(5am:def-test set-must-replace-headers-if-already-on-response-headers ()
+  (let ((target (wst.routing:make-response))
+        (headers (list :content-type "mimetype"
+                       :content-length 0)))
+    (wst.routing.response.dsl:headers headers target)
+    (wst.routing.response.dsl:headers (list :content-type "mimetype2") target)
+    (5am:is-true (string-equal (getf (wst.routing:response-headers target)
+                                     :content-type)
+                               "mimetype2"))))
+
+(5am:def-test set-status-response ()
+  (let ((target (wst.routing:make-response)))
+    (wst.routing.response.dsl:status wst.http:+http-status-200+ target)
+    (5am:is-true (= wst.http:+http-status-200+
+                    (wst.routing:response-status target)))))
+
+(5am:def-test must-throw-if-trying-to-set-an-invalid-status-value ()
+  (handler-case
+      (wst.routing.response.dsl:status nil (wst.routing:make-response))
+    (type-error (err)
+      (5am:is-true t))))
+
+(5am:def-test set-text-response ()
+  (serapeum:~>>
+   (wst.routing:make-response)
+   (wst.routing.response.dsl:text "content")
+   (let ((target _))
+     (5am:is-true (and (string-equal
+                        (getf (wst.routing:response-headers target)
+                              :content-type)
+                        "text/plain")
+                       (string-equal "content"
+                                     (wst.routing:response-content target)))))))
+
+(5am:def-test set-html-response ()
+  (serapeum:~>>
+   (wst.routing:make-response)
+   (wst.routing.response.dsl:html t "content")
+   (let ((target _))
+     (5am:is-true (and (string-equal
+                        (getf (wst.routing:response-headers target)
+                              :content-type)
+                        "text/html")
+                       (string-equal "content"
+                                     (wst.routing:response-content target)))))))
+
+(5am:def-test set-json-response ()
+  (serapeum:~>>
+   (wst.routing:make-response)
+   (wst.routing.response.dsl:json t "content")
+   (let ((target _))
+     (5am:is-true (and (string-equal
+                        (getf (wst.routing:response-headers target)
+                              :content-type)
+                        "application/json")
+                       (string-equal "content"
+                                     (wst.routing:response-content target)))))))
