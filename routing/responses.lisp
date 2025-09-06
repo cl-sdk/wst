@@ -67,7 +67,7 @@ using DEFAULT-INTERNAL-SERVER-ERROR-RESOUNSE."
   (:method ((ty t) response &key headers content)
     (if content
         (write-response response :status 500 :content content :headers headers)
-        (default-internal-server-error-resounse response))))
+        (default-internal-server-error-response response))))
 
 (defgeneric not-found-response (ty response &key)
   (:documentation "Constructs an HTTP 404 Not Found response based on the specified content type.

@@ -183,7 +183,7 @@
         rs)
     (t (err)
       (or (and *condition-handler* (funcall *condition-handler* request response err))
-         (funcall #'default-internal-server-error-resounse response)))))
+         (funcall #'default-internal-server-error-response response)))))
 
 (defun dispatch-route (request)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
