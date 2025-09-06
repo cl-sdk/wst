@@ -22,12 +22,11 @@ and CONTENT-TYPE (default is text/html)."
 (defgeneric created-response (ty response &key headers)
   (:documentation "Constructs a 201 Created HTTP response based on the specified content type.
 
-- TY: A keyword indicating the response format. Supported values include :json, :html, 
-      and T (which defaults to HTML).
+- TY: A keyword indicating the response format. (T defaults to HTML).
 - RESPONSE: The response object to be serialized and sent.
 - :HEADERS (optional): Additional HTTP headers to include in the response.
 
-Dispatches on TY to format and serialize the RESPONSE appropriately. The default 
+Dispatches on TY to format and serialize the RESPONSE appropriately. The default
 method (for TY = T) sends an empty content body with status 201 and any provided headers.")
   (:method ((ty t) response &key headers)
     (write-response response :status 201 :headers headers :content "")))
