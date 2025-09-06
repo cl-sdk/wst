@@ -6,6 +6,8 @@
                          status
                          headers
                          (content-type "text/html"))
+  "Write to RESPONSE, optionally, the CONTENT, STATUS, HEADERS
+and CONTENT-TYPE (default is text/html)."
   (setf (response-status response) status
         (response-headers response) (append (response-headers response)
                                             (list :content-type content-type)
@@ -13,68 +15,156 @@
         (response-content response) content)
   response)
 
-(defun default-internal-server-error-resounse (response)
+(defun default-internal-server-error-response (response)
+  "Sets the default internal server error on response."
   (write-response response :status 500 :content "internal server error"))
 
 (defgeneric created-response (ty response &key headers)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs a 201 Created HTTP response based on the specified content type.
+
+- TY: A keyword indicating the response format. Supported values include :json, :html, 
+      and T (which defaults to HTML).
+- RESPONSE: The response object to be serialized and sent.
+- :HEADERS (optional): Additional HTTP headers to include in the response.
+
+Dispatches on TY to format and serialize the RESPONSE appropriately. The default 
+method (for TY = T) sends an empty content body with status 201 and any provided headers.")
   (:method ((ty t) response &key headers)
     (write-response response :status 201 :headers headers :content "")))
 
 (defgeneric ok-response (ty response &key headers content)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs an HTTP 200 OK response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. (T defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+- :HEADERS (optional): A plist of additional HTTP headers to include in the response.
+- :CONTENT (optional): The body of the response. It will be serialized according to
+                       the specified type.
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+Custom methods should implement content handling for each supported type. The
+default method (for TY = T) returns the provided content with a 200 status and
+any specified headers.")
   (:method ((ty t) response &key headers content)
     (write-response response :status 200 :headers headers :content content)))
 
 (defgeneric internal-server-error-response (ty response &key headers content)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs an HTTP 500 Internal Server Error response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. Supported values include
+      :json, :html, and T (which defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+- :HEADERS (optional): A plist of additional HTTP headers to include in the response.
+- :CONTENT (optional): The body of the response. It will be serialized according to
+                       the specified type.
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+Custom methods should implement content handling for each supported type. The
+default method (for TY = T) returns the provided content with a 500 status and
+any specified headers. If no content is provided, a fallback response is generated
+using DEFAULT-INTERNAL-SERVER-ERROR-RESOUNSE."
+)
   (:method ((ty t) response &key headers content)
     (if content
         (write-response response :status 500 :content content :headers headers)
         (default-internal-server-error-resounse response))))
 
 (defgeneric not-found-response (ty response &key)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs an HTTP 404 Not Found response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. (T defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+- :CONTENT (optional): The body of the response. It will be serialized according to
+                       the specified type. Defaults to \"not found\" if not provided.
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+Custom methods should implement content handling for each supported type. The
+default method (for TY = T) returns the given content (or a default message) with
+a 404 status.")
   (:method ((ty t) response &key content)
     (write-response response :status 404 :content (or content "not found"))))
 
 (defgeneric forbidden-response (ty response &key)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs an HTTP 403 Forbidden response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. Supported values include
+      :json, :html, and T (which defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+- :CONTENT (optional): The body of the response. It will be serialized according to
+                       the specified type. Defaults to \"Forbidden\" if not provided.
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+Custom methods should implement content handling for each supported type. The
+default method (for TY = T) returns the given content (or a default message) with
+a 403 status.")
   (:method ((ty t) response &key content)
     (write-response response :status 403 :content (or content "Forbidden"))))
 
 (defgeneric unauthorized-response (ty response &key)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs an HTTP 401 Unauthorized response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. Supported values include
+      :json, :html, and T (which defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+Custom methods should implement content handling for each supported type. The
+default method (for TY = T) returns a 401 status with a default message of
+\"unauthorized\".")
   (:method ((ty t) response &key)
     (write-response response :status 401 :content "unauthorized")))
 
 (defgeneric bad-request-response (ty response &key)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs an HTTP 400 Bad Request response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. Supported values include
+      :json, :html, and T (which defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+Custom methods should implement content handling for each supported type. The
+default method (for TY = T) returns a 400 status with a default message of
+\"bad request\".")
   (:method ((ty t) response &key)
     (write-response response :status 400 :content "bad request")))
 
 (defgeneric redirect-see-other-response (ty response location &key)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs an HTTP 303 See Other redirect response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. Supported values include
+      :json, :html, and T (which defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+- LOCATION: The URI to which the client is redirected, included in the Location header.
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+The default method (for TY = T) returns a 303 status with a 'see-other' message
+and sets the Location header to the given URI.")
   (:method ((ty t) response location &key)
     (write-response response :status 303 :content "see-other"
                              :headers (list :location location))))
 
 (defgeneric unprocessable-entity (ty response &key)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs an HTTP 422 Unprocessable Entity response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. Supported values include
+      :json, :html, and T (which defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+The default method (for TY = T) returns a 422 status with a default message of
+\"unprocessable entity\".")
   (:method ((ty t) response &key)
     (write-response response :status 422 :content "unprocessable entity")))
 
 (defgeneric not-implemented (ty response &key)
-  (:documentation "Build a response for a type TY (:json, :html, t = html).
- CONTENT is any object that is serialized accourding to the type.")
+  (:documentation "Constructs an HTTP 501 Not Implemented response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. Supported values include
+      :json, :html, and T (which defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+The default method (for TY = T) returns a 501 status with a default message of
+\"not implemented\".")
   (:method ((ty t) response &key)
     (write-response response :status 501 :content "not implemented")))

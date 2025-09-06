@@ -7,6 +7,23 @@
 (in-package :wst.routing.woo)
 
 (defun request-from-woo-env (env)
+  "Constructs a request object from WOO web server environment ENV.
+
+Arguments:
+  - ENV: A property list representing the HTTP request environment provided by WOO.
+
+Returns:
+  A REQUEST structure populated with data extracted and parsed from ENV:
+    - URI, QUERY, and HASH components parsed from :request-uri.
+    - Headers from :headers.
+    - HTTP method from :request-method.
+    - Content-Type and Content-Length headers.
+    - Raw request body from :raw-body.
+    - Additional data containing the original ENV for reference.
+
+This function translates the raw environment data from the WOO server into a
+standardized request object suitable for further processing."
+
   (multiple-value-bind (path query hash)
       (wst.routing:parse-uri (getf env :request-uri))
     (wst.routing:make-request :uri path
@@ -20,6 +37,19 @@
                               :data (list :env env))))
 
 (defun response-to-woo-response (response)
+  "Converts a RESPONSE object into the format expected by the WOO web server.
+
+Arguments:
+  - RESPONSE: The response object containing status, headers, and content.
+
+Returns:
+  A list of three elements:
+    1. The HTTP status code from RESPONSE.
+    2. The HTTP headers from RESPONSE.
+    3. A list containing the response content string.
+
+This function adapts the internal RESPONSE structure to the WOO server’s response
+format for sending back to the client."
   (list (wst.routing:response-status response)
         (wst.routing:response-headers response)
         (list (wst.routing:response-content response))))

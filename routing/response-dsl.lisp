@@ -10,6 +10,12 @@
 (in-package :wst.routing.response.dsl)
 
 (defun headers (new-headers response)
+  "Adds or updates HTTP headers in RESPONSE with NEW-HEADERS.
+
+- NEW-HEADERS: A property list of header key-value pairs to add or update.
+- RESPONSE: The response object whose headers are being modified.
+
+Updates RESPONSE by merging NEW-HEADERS into its existing headers, then returns RESPONSE."
   (let ((headers (wst.routing:response-headers response)))
     (loop :for (key value) :on new-headers :by #'cddr
           :do (setf (getf headers key) value))
@@ -17,6 +23,12 @@
     response))
 
 (defun status (status response)
+  "Sets the HTTP status code of RESPONSE.
+
+- STATUS: An integer representing the HTTP status code to set.
+- RESPONSE: The response object to update.
+
+Updates RESPONSE with the given STATUS and returns the modified RESPONSE."
   (setf (wst.routing:response-status response) status)
   response)
 
@@ -27,16 +39,26 @@
   response)
 
 (defun text (content response)
+  "Sets CONTENT as plain text in RESPONSE.
+
+- CONTENT: The string data to be included in the response.
+- RESPONSE: The response object where the content and appropriate headers are set.
+
+This function sets the Content-Type header to \"text/plain\" and updates RESPONSE with CONTENT."
   (set-content-and-headers-for-content-type
    content
    "text/plain"
    response))
 
 (defgeneric html (implementation content response)
-  (:documentation "Using IMPLEMENTATION to convert CONTENT
-into html text and put it in the RESPONSE.
+  (:documentation "Converts CONTENT into HTML text using IMPLEMENTATION and sets it in RESPONSE.
 
-Default t is html as text.")
+- IMPLEMENTATION: The system or method used for the conversion (defaults to T).
+- CONTENT: The data to be converted into HTML.
+- RESPONSE: The response object where the resulting HTML content and headers are set.
+
+The default method (for IMPLEMENTATION = T) serializes CONTENT as HTML text
+and updates RESPONSE accordingly.")
   (:method ((implementation t) content response)
     (set-content-and-headers-for-content-type
      content
@@ -44,10 +66,14 @@ Default t is html as text.")
      response)))
 
 (defgeneric json (implementation content response)
-  (:documentation "Using IMPLEMENTATION to convert CONTENT
-into json text and put it in the RESPONSE.
+  (:documentation "Converts CONTENT into JSON text using IMPLEMENTATION and sets it in RESPONSE.
 
-Default t is json as text.")
+- IMPLEMENTATION: The system or method used for the conversion (defaults to T).
+- CONTENT: The data to be converted into JSON.
+- RESPONSE: The response object where the resulting JSON content and headers are set.
+
+The default method (for IMPLEMENTATION = T) serializes CONTENT as JSON text
+and updates RESPONSE accordingly.")
   (:method ((implementation t) content response)
     (set-content-and-headers-for-content-type
      content
