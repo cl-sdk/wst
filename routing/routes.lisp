@@ -1,15 +1,16 @@
 (in-package :wst.routing)
 
 (defstruct route
-  "A Route object consists of:
+  "A Route object represents a single endpoint in the web server.
 
- - A NAME of the route
- - The expected METHOD
- - Its PATH
- - A compiled Matcher
- - DATA holds information of parametrized routes
- - CUSTOM used by other components
- - DISPATCHER function"
+Fields:
+- NAME: A symbol or string representing the unique name of the route.
+- METHOD: The HTTP method expected (:GET, :POST, etc.).
+- PATH: The URI path for the route, can include parameters (e.g., \"/users/:id\").
+- MATCHER: Compiled matcher used internally to match request URIs.
+- DATA: Holds information about parameterized routes (e.g., extracted params).
+- CUSTOM: Additional data used by other components or middlewares.
+- DISPATCHER: Function called with (request response) when this route matches."
   name
   method
   path
@@ -19,12 +20,13 @@
   dispatcher)
 
 (defstruct matcher
-  "Matcher is the cached object that will hold the information
- to perform a matcher on a path.
+  "Matcher is a cached object that holds information
+to match a path efficiently.
 
- - METHOD that the route expects
- - SEGMENTS-COUNT is a easy skip in case of mismatch
- - SEGMENTS is each component of the path slice on `/`"
+Fields:
+- METHOD: The HTTP method that the route expects (:GET, :POST, etc.).
+- SEGMENTS-COUNT: Number of path segments, used for a quick mismatch check.
+- SEGMENTS: List of each component of the path, split on `/`."
   method
   segments-count
   segments)
@@ -35,8 +37,8 @@
               :method nil
               :matcher nil
               :dispatcher #'not-found-response)
-  "Route to be executed for 'not found'.
- Default is `wst.routing:not-found-response`.")
+  "Global variable holding the default route to execute when no other route matches.
+Defaults to using `wst.routing:not-found-response` as the dispatcher.")
 
 (defvar *internal-error-route*
   (make-route :name 'internal-error
@@ -44,24 +46,25 @@
               :method nil
               :matcher nil
               :dispatcher #'internal-server-error-response)
-  "Route to be executed for 'internal server error'.
- Default is `wst.routing:internal-server-error-response`.")
+  "Global variable holding the default route to execute when an internal server error occurs.
+Defaults to using `wst.routing:internal-server-error-response` as the dispatcher.")
 
 (defparameter *condition-handler* nil
-  "A user-defined function to handle conditions before
- calling the default internal server error.")
+  "Global variable holding a user-defined function that is called to handle conditions
+before the default internal server error handler is invoked.")
 
 (defparameter *any-route-handler* nil
-  "A user-defined function to handle all routes.")
+  "Global variable holding a user-defined function that is called to handle any route
+when no specific route matches.")
 
 (defun condition-handler (fn)
-  "Define FN as the function to handle conditions before
- calling the default internal server error."
+  "Sets a user-defined function FN to handle conditions before invoking
+the default internal server error handler."
   (setf *condition-handler* fn))
 
 (defun any-route-handler (method fn)
-  "Define FN as the function to handle conditions before
- calling the default internal server error."
+  "Sets a user-defined function FN as the handler for all requests
+matching METHOD when no specific route matches."
   (setf *any-route-handler*
         (make-route :name 'any-route
                     :method method
@@ -72,9 +75,19 @@
 (declaim (ftype (function (matcher symbol list integer) list)
                 match))
 (defun match (matcher method segments count)
-  "Run the MATCHER for METHOD, SEGMENTS and COUNT."
+  "Runs the MATCHER against a given HTTP METHOD and path SEGMENTS.
+
+Parameters:
+- MATCHER: The matcher object containing the expected method and path segments.
+- METHOD: The HTTP method of the incoming request.
+- SEGMENTS: A list of path segments from the incoming request URI.
+- COUNT: Number of segments in the request URI.
+
+Returns:
+- (:params PARAMS) if the matcher succeeds, where PARAMS is an association list of path parameters.
+- (:skip NIL) if the method or segment count does not match, or if any fixed segment mismatches."
   (if (or (not (= count (matcher-segments-count matcher)))
-         (not (equal method (matcher-method matcher))))
+          (not (equal method (matcher-method matcher))))
       (list :skip nil)
       (list :params (loop :for x :in (matcher-segments matcher)
                           :for y :in segments
@@ -86,13 +99,29 @@
 (declaim (ftype (function (route symbol list integer) list)
                 do-matcher))
 (defun do-matcher (route method segments count)
+  "Attempts to match a ROUTE against the given HTTP METHOD and path SEGMENTS.
+
+Parameters:
+- ROUTE: The route object to test.
+- METHOD: The HTTP method of the incoming request.
+- SEGMENTS: A list of path segments from the request URI.
+- COUNT: Number of segments in the request URI.
+
+Returns a cons cell (ROUTE . PARAMS) or NIL if the route does not match."
   (destructuring-bind (action params)
       (match (route-matcher route) method segments count)
     (when (equal action :params)
       (cons route params))))
 
 (defun match-route (path method &optional (routes *routes*))
-  "Find a route by PATH and METHOD."
+  "Finds a route from ROUTES that matches the given PATH and HTTP METHOD.
+
+Parameters:
+- PATH: The request URI as a string (e.g., \"/users/123\").
+- METHOD: The HTTP method of the incoming request (:GET, :POST, etc.).
+- ROUTES: Optional list of route objects to search; defaults to *ROUTES*.
+
+Returns a cons cell (ROUTE . PARAMS) or NIL if no matching route is found."
   (let* ((segments
            (remove-if (lambda (p) (or (null p) (= 0 (length p))))
                       (cdr (str:split "/" path))))
@@ -104,7 +133,14 @@
 (declaim (ftype (function (string symbol) matcher)
                 build-matcher))
 (defun build-matcher (path method)
-  "Build the matcher for PATH and METHOD."
+  "Constructs a matcher object for a given PATH and HTTP METHOD.
+
+Parameters:
+- PATH: The route URI as a string (e.g., \"/users/:id\").
+- METHOD: The HTTP method the matcher should expect (:GET, :POST, etc.).
+
+Returns a matcher object containing the method, segment count,
+and path segments for efficient route matching."
   (let ((segments (remove-if (lambda (p) (or (null p) (= 0 (length p))))
                              (cdr (split "/" path)))))
     (make-matcher :method method
@@ -114,7 +150,14 @@
 (declaim (ftype (function (symbol string symbol function &optional list) t)
                 add-route))
 (defun add-route (name path method dispatcher &optional custom)
-  "Add a new route associating a NAME, PATH and METHOD to a DISPATCHER."
+  "Adds a new route to the global *ROUTES* list.
+
+Parameters:
+- NAME: Symbol or string identifying the route.
+- PATH: URI path for the route (can include parameters, e.g., \"/users/:id\").
+- METHOD: HTTP method expected for this route (:GET, :POST, etc.).
+- DISPATCHER: Function to handle requests matching this route.
+- CUSTOM (optional): Additional data for use by other components or middlewares."
   (let ((route (make-route :name name
                            :path path
                            :method method
@@ -135,7 +178,10 @@
 (declaim (ftype (function (symbol) t)
                 remove-route))
 (defun remove-route (name)
-  "Remove a route associate by NAME."
+  "Removes a route from the global *ROUTES* list by its NAME.
+
+Parameters:
+- NAME: Symbol or string identifying the route to remove."
   (setf *routes*
         (remove-if (lambda (route)
                      (equal name (route-name route)))
@@ -169,7 +215,13 @@
 (declaim (ftype (function (symbol &optional list) (or route null))
                 find-route-by-name))
 (defun find-route-by-name (name &optional (routes *routes*))
-  "Find a route by NAME."
+  "Searches for a route in ROUTES by its NAME.
+
+Parameters:
+- NAME: Symbol identifying the route to find.
+- ROUTES: Optional list of routes to search; defaults to *ROUTES*.
+
+Returns a route object if found."
   (let ((sname (symbol-name name)))
     (find-if (lambda (route) (string-equal sname (symbol-name (route-name route)))) routes)))
 
@@ -178,15 +230,28 @@
  ROUTE-DATA is a pair of a route and the params and a request object."
   (handler-case
       (let* ((fn (route-dispatcher (or route
-                                      *not-fount-route*)))
+                                       *not-fount-route*)))
              (rs (funcall fn request response)))
         rs)
     (t (err)
       (or (and *condition-handler* (funcall *condition-handler* request response err))
-         (funcall #'default-internal-server-error-response response)))))
+          (funcall #'default-internal-server-error-response response)))))
 
 (defun dispatch-route (request)
-  "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
+  "Dispatches a route for the given REQUEST based on its PATH and METHOD.
+
+Parameters:
+- REQUEST: A request object containing URI, method, headers, and other data.
+
+Behavior:
+- Matches the request URI and method against registered routes.
+- If a matching route is found, adds route and parameters to the request data
+and calls the route's dispatcher.
+- If no specific route matches but *ANY-ROUTE-HANDLER* is defined,
+it is dispatched.
+- Parses cookies from the request headers before dispatching.
+- If no route matches and no any-route handler exists, calls the default dispatcher
+with NIL."
   (with-slots (method headers uri)
       request
     (let* ((response (make-response))
@@ -235,8 +300,20 @@
         (%dispatcher route request response)))))
 
 (defmacro route (name method path args &body body)
-  "Define a route with NAME for its function name, PATH to be requested and
- ARGS and BODY for the function."
+  "Macro to define a new route with a NAME, HTTP METHOD, and PATH.
+
+Parameters:
+- NAME: Symbol used as the function name for the route handler.
+- METHOD: HTTP method this route responds to (:GET, :POST, etc.).
+- PATH: The URI path for the route (can include parameters, e.g., \"/users/:id\").
+- ARGS: Function arguments for the route handler (request response).
+- BODY: Route handler.
+
+Behavior:
+- Removes any existing route with the same NAME.
+- Defines a new function with NAME using ARGS and BODY.
+- Registers the new route in *ROUTES* with the given PATH, METHOD,
+and dispatcher pointing to the function."
   `(progn
      (remove-route ',name)
      (defun ,name ,args
@@ -244,7 +321,18 @@
      (add-route ',name ,path ,method #',name)))
 
 (defun route-uri-of (route args &key query)
-  "Generate the uri of a ROUTE applying ARGS as parameters."
+  "Generates the URI for a given ROUTE, substituting ARGS
+into any parameterized segments.
+
+Parameters:
+- ROUTE: The route object whose path will be used.
+- ARGS: List of values to substitute into parameterized
+segments (segments starting with ':').
+- QUERY (optional): Query string to append to the URI
+(e.g., \"page=2&sort=asc\").
+
+Returns a string representing the full URI with parameters
+and optional query string applied."
   (concatenate 'string "/"
                (str:join "/" (loop :for segment :in (matcher-segments (route-matcher route))
                                    :if (char-equal #\: (aref segment 0))
