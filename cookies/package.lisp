@@ -1,4 +1,5 @@
-(defpackage #:wst.cookies
+(defpackage #:wst.session.http
+  (:nicknames #:wst.cookies)
   (:use #:cl)
   (:export
    #:initialize-session
@@ -6,7 +7,7 @@
    #:terminate-session
    #:update-session))
 
-(in-package :wst.cookies)
+(in-package :wst.session.http)
 
 (defgeneric initialize-session (driver data &key &allow-other-keys)
   (:documentation "Initializes a new session using the given DRIVER and initial DATA.
