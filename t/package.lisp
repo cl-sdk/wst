@@ -15,11 +15,11 @@
            wst.routing::*condition-handler* nil
            wst.routing::*any-route-handler* nil)))
 
-(wst.routing:route test-route :GET "/testing-route" (request response)
-  (declare (ignorable request))
-  (wst.routing:ok-response t response :content "ok"))
-
 (def-route-testing route-should-respond-when-dispatched ()
+  (wst.routing:route test-route :GET "/testing-route" (request response)
+    (declare (ignorable request))
+    (wst.routing:ok-response t response :content "ok"))
+
   (5am:is-true (fboundp 'test-route))
   (let ((rs (wst.routing:dispatch-route (wst.routing:make-request :uri "/testing-route"
                                                                   :method :GET))))
