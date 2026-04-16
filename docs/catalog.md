@@ -249,12 +249,14 @@
 
 ## 3. Problem Areas & Ambiguities
 
-| # | Problem | Affected systems | Severity |
-|---|---|---|---|
-| P1 | `wst.routing.woo` declares no `:depends-on` yet calls `wst.routing:parse-uri`, `wst.routing:make-request` | `wst.routing.woo` | **High** – loading order not guaranteed |
-| P2 | `wst.session.csrf` source lives in `web-server/` directory | `wst.session.csrf` | **Medium** – directory name contradicts system name |
-| P3 | `wst.routing.woo` source lives in `web-server/` directory | `wst.routing.woo` | **Medium** – no `adapters/` concept exists |
-| P4 | `wst.routing.response.dsl` uses `:module` form; all others use `:pathname` | `wst.routing.response.dsl` | **Low** – inconsistent style |
-| P5 | `wst.http` and `wst.routing.response.dsl` have no `:license` or `:version` | both | **Low** – incomplete metadata |
-| P6 | `wst.cookies` exports session lifecycle API under a "cookies" name | `wst.cookies` | **Low** – naming confusion vs cookie parsing in `wst.routing` |
-| P7 | `t/package.lisp` mixes two test packages (`wst.routing.test` and `wst.routing.response.dsl.test`) in a single file | `wst.routing.test` | **Low** – harder to navigate |
+Items marked ✅ have been resolved in this cleanup; items marked ⚠️ are open.
+
+| # | Problem | Affected systems | Severity | Status |
+|---|---|---|---|---|
+| P1 | `wst.routing.woo` declared no `:depends-on` yet called `wst.routing:parse-uri`, `wst.routing:make-request` | `wst.routing.woo` | **High** – loading order not guaranteed | ✅ Fixed: added `:depends-on (#:wst.routing)` |
+| P2 | `wst.session.csrf` source lived in `web-server/` directory | `wst.session.csrf` | **Medium** – directory name contradicts system name | ✅ Fixed: moved to `session/csrf.lisp` |
+| P3 | `wst.routing.woo` source lived in `web-server/` directory | `wst.routing.woo` | **Medium** – no `adapters/` concept existed | ✅ Fixed: moved to `adapters/woo.lisp` |
+| P4 | `wst.routing.response.dsl` used `:module` form; all others used `:pathname` | `wst.routing.response.dsl` | **Low** – inconsistent style | ✅ Fixed: replaced `:module` with `:pathname` |
+| P5 | `wst.http` and `wst.routing.response.dsl` had no `:license` or `:version` | both | **Low** – incomplete metadata | ✅ Fixed: added `"Unlicense"` and `"0.0.1"` |
+| P6 | `wst.cookies` exports session lifecycle API under a "cookies" name | `wst.cookies` | **Low** – naming confusion vs cookie parsing in `wst.routing` | ⚠️ Open: rename candidate for a future breaking-change release |
+| P7 | `t/package.lisp` mixes two test packages (`wst.routing.test` and `wst.routing.response.dsl.test`) in a single file | `wst.routing.test` | **Low** – harder to navigate | ⚠️ Open: split into separate files in a future pass |
