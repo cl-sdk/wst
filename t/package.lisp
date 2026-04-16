@@ -243,7 +243,12 @@
                          (lambda (request response)
                            (declare (ignorable response))
                            (let ((cookies (getf (wst.routing:request-data request) :cookies)))
-                             (5am:is (= 2 (length (cl-hash-util:hash-keys cookies))))
+                             (5am:is (= 2 (length cookies)))
+                             (5am:is (string-equal "a"
+                                                   (wst.cookies:cookie-value
+                                                    (find "first" cookies
+                                                          :key #'wst.cookies:cookie-name
+                                                          :test #'string-equal))))
                              response)))
   (wst.routing:dispatch-route (wst.routing:make-request
                                :uri "/"

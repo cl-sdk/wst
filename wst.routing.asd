@@ -8,7 +8,8 @@
                #:cl-hash-util
                #:flexi-streams
                #:serapeum
-               #:com.inuoe.jzon)
+               #:com.inuoe.jzon
+               #:wst.cookies)
   :pathname "routing"
   :serial t
   :components ((:file "package")

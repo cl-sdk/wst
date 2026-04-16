@@ -188,30 +188,6 @@ Parameters:
                    *routes*))
   t)
 
-(declaim (ftype (function (string) hash-table)
-                parse-cookies-string))
-(defun parse-cookies-string (cookies)
-  (reduce (lambda (cookies pair)
-            (destructuring-bind (key value)
-                (str:split "=" pair)
-              (setf (gethash key cookies) value)
-              cookies))
-          (cl-ppcre:split ";\\s?" cookies)
-          :initial-value (make-hash-table :test 'equal)))
-
-(declaim (ftype (function (hash-table request response) t)
-                parse-cookies))
-(defun parse-cookies (headers request response)
-  (let* ((cookies-string (gethash "cookie" headers (gethash "Cookie" headers "")))
-         (cookies (parse-cookies-string cookies-string)))
-    (setf (request-data request)
-          (append (request-data request)
-                  (list :cookies cookies))
-          (response-data response)
-          (append (getf (response-data response) :cookies)
-                  (list :cookies nil)))
-    t))
-
 (declaim (ftype (function (symbol &optional list) (or route null))
                 find-route-by-name))
 (defun find-route-by-name (name &optional (routes *routes*))
@@ -249,17 +225,15 @@ Behavior:
 and calls the route's dispatcher.
 - If no specific route matches but *ANY-ROUTE-HANDLER* is defined,
 it is dispatched.
-- Parses cookies from the request headers before dispatching.
 - If no route matches and no any-route handler exists, calls the default dispatcher
 with NIL."
-  (with-slots (method headers uri)
+  (with-slots (method uri)
       request
     (let* ((response (make-response))
            (found (or (match-route uri method)
                      (and *any-route-handler*
                         (equal (request-method request) (route-method *any-route-handler*))
                         (cons *any-route-handler* nil)))))
-      (parse-cookies headers request response)
       (if (not found)
           (%dispatcher nil request response)
           (destructuring-bind (route . params)
@@ -272,7 +246,7 @@ with NIL."
 (defun dispatch-route-by-name (name request &optional old-params)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
   (declare (ignorable old-params))
-  (with-slots (method headers)
+  (with-slots (method)
       request
     (let* ((response (make-response))
            (route (or (find-route-by-name name *routes*)
@@ -282,22 +256,18 @@ with NIL."
            (found (or (match-route (request-uri request) (request-method request)) (cons route nil))))
       (destructuring-bind (route . params)
           found
-        (parse-cookies headers request response)
         (setf (request-data request) (append (request-data request) (list :params params)))
         (%dispatcher route request response)))))
 
 (defun dispatch-route-by-route (route request)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
-  (with-slots (method headers)
-      request
-    (let* ((response (make-response))
-           (found (or (match-route (request-uri request) (request-method request) (list route))
-                     (cons route nil))))
-      (destructuring-bind (route . params)
-          found
-        (parse-cookies headers request response)
-        (setf (request-data request) (append (request-data request) (list :params params)))
-        (%dispatcher route request response)))))
+  (let* ((response (make-response))
+         (found (or (match-route (request-uri request) (request-method request) (list route))
+                   (cons route nil))))
+    (destructuring-bind (route . params)
+        found
+      (setf (request-data request) (append (request-data request) (list :params params)))
+      (%dispatcher route request response))))
 
 (defmacro route (name method path args &body body)
   "Macro to define a new route with a NAME, HTTP METHOD, and PATH.
