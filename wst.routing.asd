@@ -1,4 +1,5 @@
 (asdf:defsystem #:wst.routing
+  :description "Core route registration, matching, and dispatch for wst web applications."
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.0.1"

@@ -1,4 +1,5 @@
 (asdf:defsystem #:wst.routing.dsl
+  :description "Declarative DSL for composing routes with middleware (group/resource/wrap/any-route)."
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.0.1"

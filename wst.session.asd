@@ -1,4 +1,5 @@
 (asdf:defsystem #:wst.session
+  :description "Generic interface for session backends (create/recover/update/renew/exists/terminate)."
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.0.1"
