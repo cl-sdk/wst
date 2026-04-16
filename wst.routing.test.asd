@@ -1,4 +1,5 @@
 (asdf:defsystem #:wst.routing.test
+  :description "FiveAM test suite for wst.routing, wst.routing.dsl, wst.routing.woo, and wst.routing.response.dsl."
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.0.1"
