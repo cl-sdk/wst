@@ -12,6 +12,7 @@
                #:wst.request-content
                #:wst.circuit-breaker
                #:wst.circuit-breaker.routing
+               #:wst.cookies
                #:wst.routing
                #:wst.routing.dsl
                #:wst.routing.woo

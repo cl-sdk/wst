@@ -22,6 +22,10 @@ Main system. Manages the routes used in a application.
 ;; => "/something/1"
 ```
 
+#### wst.cookies
+
+HTTP cookie parsing helpers.
+
 #### wst.routing.dsl
 
 A DSL to build filters and middlewares.

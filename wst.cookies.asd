@@ -1,0 +1,9 @@
+(asdf:defsystem #:wst.cookies
+  :description "HTTP cookie parsing helpers backed by cl-cookie."
+  :author "Bruno Dias"
+  :license "Unlicense"
+  :version "0.0.1"
+  :depends-on (#:cl-cookie)
+  :pathname "cookies"
+  :serial t
+  :components ((:file "package")))
