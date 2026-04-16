@@ -111,6 +111,24 @@ Available constructs:
 
 (in-package #:wst.routing.dsl)
 
+(defun %handler-executor (handler before-actions after-actions)
+  (lambda (request response)
+    (let ((halted nil))
+      (dolist (fn before-actions)
+        (destructuring-bind (control . response)
+            (funcall fn request response)
+          (cond
+            ((eq control :halt) (progn
+                                  (setf halted t)
+                                  (return)))
+            ((eq control :continue) t)
+            (t (progn (print control) (error "middleware must return a pair of (:halt | :continue, response)"))))))
+      (unless halted
+        (funcall handler request response))
+      (dolist (fn after-actions)
+        (funcall fn request response))
+      response)))
+
 (defun %any-route (api stack)
   "Construct a route handler from an API definition and a STACK.
 
@@ -124,19 +142,15 @@ Arguments:
 
   Composes before, API-provided, and after handlers into a sequence of actions.
   Defines a route handler "
-  (with-keys ((bfs "fns-pre-handler") (paths "uri-segments") (afs "fns-post-handler"))
-      stack
+  (with-keys ((pre-handler "fns-pre-handler") (paths "uri-segments") (post-handler "fns-post-handler"))
+    stack
     (destructuring-bind (method &rest rest)
         api
-      (let ((actions (append (reduce #'append bfs)
-                             rest
-                             (reduce #'append afs))))
-        (any-route-handler
-         method
-         (lambda (request response)
-           (loop :for fn :in actions
-                 :do (funcall fn request response)
-                 :finally (return response))))))))
+      (any-route-handler
+       method
+       (%handler-executor (car rest)
+                          (reduce #'append pre-handler)
+                          (reduce #'append post-handler))))))
 
 (defun %create-route (api stack)
   "Create and register a route from an API definition and a STACK.
@@ -168,24 +182,19 @@ Behavior:
   - The registered route executes ACTIONS in order with REQUEST and RESPONSE,
     returning the final RESPONSE.
   - Any trailing :CUSTOM keyword and its value(s) are stored as route metadata."
-  (with-keys ((bfs "fns-pre-handler") (paths "uri-segments") (afs "fns-post-handler"))
-      stack
+  (with-keys ((pre-handler "fns-pre-handler") (paths "uri-segments") (post-handler "fns-post-handler"))
+    stack
     (destructuring-bind (method route-name path &rest rest)
         api
       (let* ((onstack (join "" paths))
              (route-path (if (stringp path) path ""))
              (the-path (concatenate 'string onstack route-path))
-             (the-action (if (not (stringp path)) path (car rest)))
-             (actions (append
-                       (reduce #'append bfs)
-                       (ensure-list the-action)
-                       (reduce #'append afs))))
+             (handler (if (not (stringp path)) path (car rest))))
         (remove-route route-name)
         (add-route route-name the-path method
-                   (lambda (request response)
-                     (loop :for fn :in actions
-                           :do (funcall fn request response)
-                           :finally (return response)))
+                   (%handler-executor handler
+                                      (reduce #'append pre-handler)
+                                      (reduce #'append post-handler))
                    (cdr (member :custom rest)))))))
 
 (defun %wrap-routes (api stack)
@@ -214,14 +223,14 @@ Example:
 
 Execution order in this example:
   fn1 → fn2 → route → fn3 → fn4"
-  (with-keys ((bfs "fns-pre-handler") (afs "fns-post-handler"))
+  (with-keys ((pre-handler "fns-pre-handler") (post-handler "fns-post-handler"))
       stack
     (progn
-      (setf bfs (append bfs (list (ensure-list (getf api :before nil))))
-            afs (append afs (list (ensure-list (getf api :after nil)))))
+      (setf pre-handler (append pre-handler (list (ensure-list (getf api :before nil))))
+            post-handler (append post-handler (list (ensure-list (getf api :after nil)))))
       (%build-webserver (getf api :route) stack)
-      (setf bfs (butlast bfs)
-            afs (butlast afs)))))
+      (setf pre-handler (butlast pre-handler)
+            post-handler (butlast post-handler)))))
 
 (defun %build-webserver (api stack)
   "Build the webserver routing tree from an API definition and a STACK.

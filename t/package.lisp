@@ -87,25 +87,32 @@
 
 (def-route-testing build-route-with-just-before ()
   (let* ((count 0)
-         (must-be-called (lambda (req res)
-                           (declare (ignore req res))
-                           (setf count (1+ count)))))
+         (before-action (lambda (req res)
+                          (declare (ignore req res))
+                          (setf count (1+ count))
+                          (cons :continue res)))
+         (handler (lambda (req res)
+                    (declare (ignore req res))
+                    (setf count (1+ count)))))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:wrap
-       :before ,must-be-called
-       :route (wst.routing.dsl:route :GET index "/" ,must-be-called)))
+       :before ,before-action
+       :route (wst.routing.dsl:route :GET index "/" ,handler)))
     (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))
     (5am:is (= 2 count))))
 
 (def-route-testing build-route-with-just-after ()
   (let* ((count 0)
-         (must-be-called (lambda (req res)
+         (after-action (lambda (req res)
                            (declare (ignore req res))
-                           (setf count (1+ count)))))
+                         (setf count (1+ count))))
+         (handler (lambda (req res)
+                    (declare (ignore req res))
+                    (setf count (1+ count)))))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:wrap
-       :route (wst.routing.dsl:route :GET index "/" ,must-be-called)
-       :after ,must-be-called))
+       :route (wst.routing.dsl:route :GET index "/" ,handler)
+       :after ,after-action))
     (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))
     (5am:is (= 2 count))))
 
@@ -113,7 +120,8 @@
   (let* ((count 0)
          (must-be-called (lambda (req res)
                            (declare (ignore req res))
-                           (setf count (1+ count)))))
+                           (setf count (1+ count))
+                           (cons :continue res))))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:wrap
        :before ,must-be-called
