@@ -3,6 +3,6 @@
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.0.1"
-  :pathname "cookies"
+  :pathname "session/http"
   :serial t
   :components ((:file "package")))
