@@ -5,7 +5,19 @@
 
 (5am:def-suite wst.routing.suite)
 
-(5am:in-suite wst.routing.suite)
+(5am:def-suite wst.routing.dispatch.suite
+  :in wst.routing.suite)
+
+(5am:def-suite wst.routing.dsl.suite
+  :in wst.routing.suite)
+
+(5am:def-suite wst.routing.responses.suite
+  :in wst.routing.suite)
+
+(5am:def-suite wst.routing.uri-parsing.suite
+  :in wst.routing.suite)
+
+(5am:in-suite wst.routing.dispatch.suite)
 
 (defmacro def-route-testing (name args &body body)
   (declare (ignorable args))
@@ -68,6 +80,8 @@
 (defun route-responder (request response)
   (declare (ignore request response))
   (5am:is-true t))
+
+(5am:in-suite wst.routing.dsl.suite)
 
 (def-route-testing build-a-simple-route-using-the-dsl ()
   (wst.routing.dsl:build-webserver
@@ -179,6 +193,8 @@
     (5am:is-true (equal :ok (car (wst.routing::route-custom (wst.routing:find-route-by-name 'route-a)))))
     (5am:is-true (equal :ok (car (wst.routing::route-custom (wst.routing:find-route-by-name 'route-b)))))))
 
+(5am:in-suite wst.routing.dispatch.suite)
+
 (def-route-testing parse-request-cookies ()
   (wst.routing:add-route 'cookies "/" :GET (lambda (request response)
                                              (declare (ignorable response))
@@ -265,6 +281,8 @@
      (wst.routing:make-request :uri "/a" :method :POST))
     (5am:is (= count 0))))
 
+(5am:in-suite wst.routing.responses.suite)
+
 (def-route-testing respond-with-internal-server-error ()
   (wst.routing:any-route-handler :GET (lambda (request response)
                                         (declare (ignorable request))
@@ -281,11 +299,11 @@
                                         (wst.routing:unauthorized-response t response)
                                         response))
   (5am:is (= 401 (wst.routing:response-status
-                  (wst.routing:dispatch-route-by-name
-                   'a
-                   (wst.routing:make-request :uri "/" :method :GET))))))
+                   (wst.routing:dispatch-route-by-name
+                    'a
+                    (wst.routing:make-request :uri "/" :method :GET))))))
 
-(5am:def-test respond-with-forbidden ()
+(def-route-testing respond-with-forbidden ()
   (wst.routing:any-route-handler :GET (lambda (request response)
                                         (declare (ignorable request))
                                         (wst.routing:forbidden-response t response)
@@ -330,6 +348,8 @@
     (5am:is (string-equal (getf (wst.routing:response-headers rs) :content-type)
                           "application/s-expression"))
     (5am:is (equal (wst.routing:response-content rs) "(1 2 3)"))))
+
+(5am:in-suite wst.routing.uri-parsing.suite)
 
 (5am:def-test parse-request-uri-just-path ()
   (let ((uri "/a/b/c"))
@@ -378,7 +398,16 @@
 
 (5am:def-suite wst.routing.response.dsl.suite)
 
-(5am:in-suite wst.routing.response.dsl.suite)
+(5am:def-suite wst.routing.response.dsl.headers.suite
+  :in wst.routing.response.dsl.suite)
+
+(5am:def-suite wst.routing.response.dsl.status.suite
+  :in wst.routing.response.dsl.suite)
+
+(5am:def-suite wst.routing.response.dsl.body.suite
+  :in wst.routing.response.dsl.suite)
+
+(5am:in-suite wst.routing.response.dsl.headers.suite)
 
 (5am:def-test set-no-headers-on-response-headers ()
   (let ((target (wst.routing:make-response)))
@@ -403,6 +432,8 @@
                                      :content-type)
                                "mimetype2"))))
 
+(5am:in-suite wst.routing.response.dsl.status.suite)
+
 (5am:def-test set-status-response ()
   (let ((target (wst.routing:make-response)))
     (wst.routing.response.dsl:status wst.http:+http-status-200+ target)
@@ -410,10 +441,10 @@
                     (wst.routing:response-status target)))))
 
 (5am:def-test must-throw-if-trying-to-set-an-invalid-status-value ()
-  (handler-case
-      (wst.routing.response.dsl:status nil (wst.routing:make-response))
-    (type-error (err)
-      (5am:is-true t))))
+  (5am:signals type-error
+    (wst.routing.response.dsl:status nil (wst.routing:make-response))))
+
+(5am:in-suite wst.routing.response.dsl.body.suite)
 
 (5am:def-test set-text-response ()
   (serapeum:~>>
