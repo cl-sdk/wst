@@ -493,19 +493,64 @@
                                   (wst.routing:find-route-by-name 'route-b)))))))
 
 (def-route-testing rate-limit-throttles-after-limit-is-reached ()
-  (let ((handler (lambda (req res)
-                   (declare (ignore req))
-                   (wst.routing:ok-response t res :content "ok")
-                   res)))
+  ;; wst.throttle:rate-limit is a pure rate-limiter that knows nothing about
+  ;; requests or responses. Here we compose it into a DSL before-middleware
+  ;; by hand, using the three values it returns.
+  (let* ((limiter (wst.throttle:rate-limit :max-requests 1 :window-seconds 60))
+         (middleware (lambda (request response)
+                       (declare (ignorable request))
+                       (multiple-value-bind (allowed-p retry-after)
+                           (funcall limiter :global)
+                         (if allowed-p
+                             (cons :continue response)
+                             (cons :halt
+                                   (wst.routing:too-many-requests-response
+                                    t response
+                                    :headers (list :retry-after
+                                                   (format nil "~a" retry-after))))))))
+         (handler (lambda (req res)
+                    (declare (ignore req))
+                    (wst.routing:ok-response t res :content "ok")
+                    res)))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:wrap
-       :before ,(wst.throttle:rate-limit :max-requests 1 :window-seconds 60)
+       :before ,middleware
        :route (wst.routing.dsl:route :GET throttled "/" ,handler)))
-    (let ((first (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET)))
+    (let ((first  (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET)))
           (second (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET))))
       (5am:is (= 200 (wst.routing:response-status first)))
       (5am:is (= 429 (wst.routing:response-status second)))
       (5am:is-true (getf (wst.routing:response-headers second) :retry-after)))))
+
+;;;
+;;; wst.throttle suite
+;;;
+
+(5am:def-suite wst.throttle.suite
+  :description "Tests for the wst.throttle package.")
+
+(5am:in-suite wst.throttle.suite)
+
+(5am:def-test rate-limit-allows-calls-up-to-max ()
+  (let ((limiter (wst.throttle:rate-limit :max-requests 3 :window-seconds 60)))
+    (multiple-value-bind (a) (funcall limiter :k) (5am:is-true a))
+    (multiple-value-bind (a) (funcall limiter :k) (5am:is-true a))
+    (multiple-value-bind (a) (funcall limiter :k) (5am:is-true a))
+    (multiple-value-bind (a) (funcall limiter :k) (5am:is-false a))))
+
+(5am:def-test rate-limit-returns-remaining-count ()
+  (let ((limiter (wst.throttle:rate-limit :max-requests 3 :window-seconds 60)))
+    (multiple-value-bind (allowed-p _retry remaining)
+        (funcall limiter :k)
+      (declare (ignore _retry))
+      (5am:is-true allowed-p)
+      (5am:is (= 2 remaining)))))
+
+(5am:def-test rate-limit-tracks-keys-independently ()
+  (let ((limiter (wst.throttle:rate-limit :max-requests 1 :window-seconds 60)))
+    (funcall limiter :a)
+    (multiple-value-bind (allowed-p) (funcall limiter :a) (5am:is-false allowed-p))
+    (multiple-value-bind (allowed-p) (funcall limiter :b) (5am:is-true allowed-p))))
 
 ;;;
 ;;; wst.routing.woo suite

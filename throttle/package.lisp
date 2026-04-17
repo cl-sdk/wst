@@ -1,39 +1,44 @@
 (defpackage #:wst.throttle
   (:use #:cl)
-  (:documentation "Fixed-window rate limiting and throttling middleware for wst.
+  (:documentation "Fixed-window rate limiting and throttling.
+
+This package is independent of HTTP request and response objects.
+It provides a pure rate-limiting primitive that tracks counts per
+arbitrary key and can be composed with any middleware layer.
 
 Provides:
 
   • RATE-LIMIT
-    Creates a before-middleware function that enforces a fixed-window request budget.
+    Creates a fixed-window rate-limiter closure.
 
     Syntax:
-      (rate-limit &key max-requests window-seconds key-fn on-throttle)
+      (rate-limit &key max-requests window-seconds)
 
-    - :MAX-REQUESTS   – Maximum requests allowed within the window (default: 60).
+    - :MAX-REQUESTS   – Maximum calls allowed within the window (default: 60).
     - :WINDOW-SECONDS – Length of the time window in seconds (default: 60).
-    - :KEY-FN         – Function of one argument (request) that returns a key
-                        identifying the client or bucket. Defaults to a shared
-                        global bucket (:global) for all clients.
-    - :ON-THROTTLE    – Function called as (request response retry-after-seconds)
-                        when the budget is exhausted. Must return the response
-                        object. Defaults to a 429 Too Many Requests response
-                        that includes a Retry-After header.
 
-    Accepted requests automatically receive rate-limit budget headers:
-      X-RateLimit-Limit     – The configured maximum.
-      X-RateLimit-Remaining – Remaining requests in the current window.
-      X-RateLimit-Reset     – Seconds until the window resets.
+    Returns a closure of one argument KEY. Calling the closure produces
+    three values:
+      1. ALLOWED-P            – T if the call is within budget, NIL if throttled.
+      2. RETRY-AFTER-SECONDS  – Seconds until the current window resets.
+      3. REMAINING            – Remaining calls allowed in the window (0 when
+                                throttled).
 
-    Throttled requests receive:
-      Retry-After – Seconds until the client may retry.
+    The KEY may be any value comparable with EQUAL (e.g. a string, keyword,
+    or integer). Separate keys are tracked independently, allowing per-user,
+    per-IP, or any other bucketing strategy.
 
-    Behavior:
-      Returns a closure compatible with the WST DSL :before handler protocol.
-      The closure produces either (:continue . response) or (:halt . response).")
-  (:import-from #:wst.routing
-                #:too-many-requests-response
-                #:response-headers)
+    Expired entries are lazily evicted from the internal table on the next
+    access for that key, preventing unbounded memory growth.
+
+    Example:
+      (let ((limiter (wst.throttle:rate-limit :max-requests 100
+                                              :window-seconds 60)))
+        (multiple-value-bind (allowed-p retry-after remaining)
+            (funcall limiter \"192.0.2.1\")
+          (if allowed-p
+              (format t \"~a requests left in window.\" remaining)
+              (format t \"Rate limited. Retry after ~a seconds.\" retry-after))))")
   (:export
    #:rate-limit))
 
@@ -44,36 +49,19 @@ Provides:
   (count 0 :type integer)
   (start 0 :type integer))
 
-(defun rate-limit (&key
-                     (max-requests 60)
-                     (window-seconds 60)
-                     (key-fn (lambda (request)
-                               (declare (ignorable request))
-                               :global))
-                     (on-throttle
-                      (lambda (request response retry-after-seconds)
-                        (declare (ignorable request))
-                        (too-many-requests-response t response
-                                                    :headers (list :retry-after
-                                                                   (format nil "~a" retry-after-seconds))))))
-  "Creates a before-middleware function that enforces fixed-window rate limiting.
+(defun rate-limit (&key (max-requests 60) (window-seconds 60))
+  "Creates a fixed-window rate-limiter closure.
 
-Returns middleware compatible with WST DSL `:before` handlers, producing either:
-- (:continue . response) when the request is accepted.
-- (:halt . response) when the budget is exhausted.
-
-Notes:
-- Uses a hash table keyed by KEY-FN results. Expired entries are lazily removed
-  from the table on the next access for that key, preventing unbounded growth.
-- This implementation is not thread-safe. In multi-threaded deployments, wrap
-  the middleware with appropriate locking or use a thread-safe counter store."
+The returned closure accepts a single KEY argument and returns three values:
+- ALLOWED-P:           T if the call is within budget; NIL when throttled.
+- RETRY-AFTER-SECONDS: Seconds until the current window resets.
+- REMAINING:           Calls remaining in the window (0 when throttled)."
   (let ((state (make-hash-table :test #'equal)))
-    (lambda (request response)
-      (let* ((key (funcall key-fn request))
-             (now (get-universal-time))
+    (lambda (key)
+      (let* ((now (get-universal-time))
              (existing (gethash key state))
-             ;; Lazily evict entries when the window has elapsed (>= means the
-             ;; window period is complete; a new window begins on this request).
+             ;; Lazily evict entries whose window has elapsed.
+             ;; >= means the window period is complete; a new one begins now.
              (window (cond
                        ((null existing)
                         (make-window-state 0 now))
@@ -86,12 +74,7 @@ Notes:
              (retry-after-seconds (max 0 (- window-seconds (- now start))))
              (remaining (max 0 (- max-requests (1+ count)))))
         (if (>= count max-requests)
-            (cons :halt (funcall on-throttle request response retry-after-seconds))
+            (values nil retry-after-seconds 0)
             (progn
               (setf (gethash key state) (make-window-state (1+ count) start))
-              (setf (response-headers response)
-                    (append (response-headers response)
-                            (list :x-ratelimit-limit (format nil "~a" max-requests)
-                                  :x-ratelimit-remaining (format nil "~a" remaining)
-                                  :x-ratelimit-reset (format nil "~a" retry-after-seconds))))
-              (cons :continue response)))))))
+              (values t retry-after-seconds remaining)))))))
