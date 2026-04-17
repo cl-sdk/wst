@@ -776,3 +776,33 @@
     (5am:is (string-equal "application/json"
                           (getf (wst.routing:response-headers target) :content-type)))
     (5am:is (string-equal "{}" (wst.routing:response-content target)))))
+
+;;;
+;;; wst.request-accept-content suite
+;;;
+
+(5am:def-suite wst.request-accept-content.suite
+  :description "Tests for the wst.request-accept-content package.")
+
+(5am:in-suite wst.request-accept-content.suite)
+
+;;; parse-content – user-defined parser
+
+;; Register a user-defined parser for a custom MIME type at suite load time.
+(defmethod wst.request-accept-content:parse-content
+    ((type (eql :|application/x-custom|)) content)
+  "Example user-defined parser: upper-cases the raw body string."
+  (string-upcase (wst.request-accept-content:content-as-string content)))
+
+(5am:def-test user-defined-parser-is-called-for-custom-mime-type ()
+  "Dispatching parse-content on a user-defined MIME keyword calls the custom method."
+  (5am:is (string= "HELLO"
+                   (wst.request-accept-content:parse-content
+                    :|application/x-custom| "hello"))))
+
+(5am:def-test user-defined-parser-receives-stream-content ()
+  "The user-defined parser can call content-as-string to normalise its input."
+  (let ((stream (make-string-input-stream "world")))
+    (5am:is (string= "WORLD"
+                     (wst.request-accept-content:parse-content
+                      :|application/x-custom| stream)))))
