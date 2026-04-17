@@ -109,17 +109,23 @@ ENCODING is the external-format keyword used when decoding a binary stream
                                  (url-decode-component (subseq pair (1+ separator))))
                            (cons (url-decode-component pair) ""))))))
 
-(defgeneric parse-content (type content)
+(defgeneric parse-content (type content &optional encoding)
   (:documentation "Parse CONTENT using the parser identified by TYPE.
 
-TYPE is the exact MIME type keyword (e.g. :|application/x-www-form-urlencoded|,
-:|application/json|).  CONTENT is the raw body value (string, pathname, stream,
-etc.).  All state must be supplied as arguments; no request object is accessed.
+TYPE is the exact MIME type keyword (e.g. :|application/x-www-form-urlencoded|)
+or the special symbol :raw for pass-through.  CONTENT is the raw body value
+\(string or stream).  ENCODING is the charset keyword used when decoding a
+binary stream (e.g. :us-ascii, :utf-8); it should be extracted from the
+Content-Type header via parse-accept and defaults to :us-ascii.
 
-The default method (any unrecognised TYPE) treats the content as text/plain and
-returns it unchanged.")
-  (:method ((type (eql :|application/x-www-form-urlencoded|)) content)
-    (%parse-form-urlencoded (content-as-string content)))
-  (:method (type content)
-    (declare (ignore type))
-    content))
+The built-in :raw method returns CONTENT coerced to a string without further
+parsing.  Any unrecognised TYPE signals an error; callers must add a method
+for custom MIME types.")
+  (:method ((type (eql :|application/x-www-form-urlencoded|)) content
+            &optional (encoding :us-ascii))
+    (%parse-form-urlencoded (content-as-string content encoding)))
+  (:method ((type (eql :raw)) content &optional (encoding :us-ascii))
+    (content-as-string content encoding))
+  (:method (type content &optional encoding)
+    (declare (ignore content encoding))
+    (error "No parse-content method defined for MIME type: ~a" type)))

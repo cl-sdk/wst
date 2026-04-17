@@ -135,7 +135,7 @@
 (5am:def-test parse-content-parses-form-urlencoded ()
   (5am:is (equal '(("name" . "alice smith") ("email" . "alice@test.dev"))
                  (wst.request-accept-content:parse-content
-                  :form-urlencoded
+                  :|application/x-www-form-urlencoded|
                   "name=alice+smith&email=alice%40test.dev"))))
 
 (5am:def-test parse-content-returns-raw-content ()
@@ -776,9 +776,9 @@
 
 ;; Register a user-defined parser for a custom MIME type at suite load time.
 (defmethod wst.request-accept-content:parse-content
-    ((type (eql :|application/x-custom|)) content)
+    ((type (eql :|application/x-custom|)) content &optional (encoding :us-ascii))
   "Example user-defined parser: upper-cases the raw body string."
-  (string-upcase (wst.request-accept-content:content-as-string content)))
+  (string-upcase (wst.request-accept-content:content-as-string content encoding)))
 
 (5am:def-test user-defined-parser-is-called-for-custom-mime-type ()
   "Dispatching parse-content on a user-defined MIME keyword calls the custom method."
