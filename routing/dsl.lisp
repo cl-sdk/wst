@@ -93,69 +93,21 @@ Available constructs:
                 #:with-keys)
   (:import-from #:wst.routing
                 #:any-route-handler
-                #:too-many-requests-response)
+                #:add-route
+                #:remove-route)
   (:import-from #:alexandria
                 #:ensure-list)
-  (:import-from #:wst.routing
-                #:add-route)
-  (:import-from #:wst.routing
-                #:remove-route)
   (:import-from #:str
                 #:join)
   (:export
    #:build-webserver
    #:wrap
    #:any-route
-   #:rate-limit
    #:route
    #:group
    #:resource))
 
 (in-package #:wst.routing.dsl)
-
-(defun %fixed-window-state (state key now window-seconds)
-  (destructuring-bind (count start)
-      (gethash key state (list 0 now))
-    (if (>= (- now start) window-seconds)
-        (list 0 now)
-        (list count start))))
-
-(defun rate-limit (&key
-                     (max-requests 60)
-                     (window-seconds 60)
-                     (key-fn (lambda (request)
-                               (declare (ignorable request))
-                               :global))
-                     (on-throttle
-                      (lambda (request response retry-after-seconds)
-                        (declare (ignorable request))
-                        (too-many-requests-response t response
-                                                    :headers (list :retry-after
-                                                                   (format nil "~a" retry-after-seconds))))))
-  "Creates a before-middleware function that enforces fixed-window rate limiting.
-
-Returns middleware compatible with WST DSL `:before` handlers, producing either:
-- (:continue . response) when the request is accepted.
-- (:halt . response) when throttled."
-  (let ((state (make-hash-table :test #'equal)))
-    (lambda (request response)
-      (let* ((key (funcall key-fn request))
-             (now (get-universal-time))
-             (window (%fixed-window-state state key now window-seconds))
-             (count (first window))
-             (start (second window))
-             (retry-after-seconds (max 0 (- window-seconds (- now start))))
-             (remaining (max 0 (- max-requests (1+ count)))))
-        (if (>= count max-requests)
-            (cons :halt (funcall on-throttle request response retry-after-seconds))
-            (progn
-              (setf (gethash key state) (list (1+ count) start))
-              (setf (wst.routing:response-headers response)
-                    (append (wst.routing:response-headers response)
-                            (list :x-ratelimit-limit (format nil "~a" max-requests)
-                                  :x-ratelimit-remaining (format nil "~a" remaining)
-                                  :x-ratelimit-reset (format nil "~a" retry-after-seconds))))
-              (cons :continue response)))))))
 
 (defun %handler-executor (handler before-actions after-actions)
   (lambda (request response)

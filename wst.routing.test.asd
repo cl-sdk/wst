@@ -12,7 +12,8 @@
                #:wst.routing
                #:wst.routing.dsl
                #:wst.routing.woo
-               #:wst.routing.response.dsl)
+               #:wst.routing.response.dsl
+               #:wst.throttle)
   :pathname "t"
   :serial t
   :components ((:file "package")))

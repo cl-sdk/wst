@@ -499,7 +499,7 @@
                    res)))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:wrap
-       :before ,(wst.routing.dsl:rate-limit :max-requests 1 :window-seconds 60)
+       :before ,(wst.throttle:rate-limit :max-requests 1 :window-seconds 60)
        :route (wst.routing.dsl:route :GET throttled "/" ,handler)))
     (let ((first (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET)))
           (second (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET))))
