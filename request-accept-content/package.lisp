@@ -119,7 +119,7 @@ binary stream (e.g. :us-ascii, :utf-8); it should be extracted from the
 Content-Type header via parse-accept and defaults to :us-ascii.
 
 The built-in :raw method returns CONTENT coerced to a string without further
-parsing.  Any unrecognised TYPE signals an error; callers must add a method
+parsing.  Any unrecognized TYPE signals an error; callers must add a method
 for custom MIME types.")
   (:method ((type (eql :|application/x-www-form-urlencoded|)) content
             &optional (encoding :us-ascii))
