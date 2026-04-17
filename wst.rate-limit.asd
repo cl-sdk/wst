@@ -4,6 +4,6 @@
   :license "Unlicense"
   :version "0.0.1"
   :depends-on (#:wst.rate-limit.store)
-  :pathname "rate-limit"
+  :pathname "throttle"
   :serial t
   :components ((:file "rate-limit")))
