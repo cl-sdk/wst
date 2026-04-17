@@ -138,6 +138,11 @@
     (5am:is (string= "hello"
                      (wst.routing:parse-request-body request)))))
 
+(5am:def-test parse-request-body-signals-on-unknown-parser ()
+  (5am:signals error
+    (wst.routing:parse-request-body (wst.routing:make-request :content "hello")
+                                    :parser :unknown)))
+
 (5am:def-test request-content-as-string-reads-from-pathname ()
   (let ((path (merge-pathnames
                (make-pathname :name (format nil "wst-request-content-~a" (gensym "TMP-"))

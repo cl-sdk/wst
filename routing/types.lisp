@@ -55,15 +55,13 @@ Slots:
       ((stringp content) content)
       ((pathnamep content) (read-file-string content))
       ((streamp content)
-       (handler-case
-           (let ((stream (if (subtypep (stream-element-type content) 'character)
-                             content
-                             (flexi-streams:make-flexi-stream content :external-format :utf-8))))
-             (with-output-to-string (out)
-               (loop :for char = (read-char stream nil nil)
-                     :while char
-                     :do (write-char char out))))
-         (error () "")))
+       (let ((stream (if (subtypep (stream-element-type content) 'character)
+                         content
+                         (flexi-streams:make-flexi-stream content :external-format :utf-8))))
+         (with-output-to-string (out)
+           (loop :for char = (read-char stream nil nil)
+                 :while char
+                 :do (write-char char out)))))
       (t (format nil "~a" content)))))
 
 (defun parse-form-urlencoded-content (content)
@@ -109,7 +107,8 @@ Slots:
   (:method ((type (eql :form-urlencoded)) request)
     (parse-form-urlencoded-content (request-content-as-string request)))
   (:method ((type t) request)
-    (parse-request-content :raw request)))
+    (declare (ignore request))
+    (error "Unknown request body parser type: ~s" type)))
 
 (defun parse-request-body (request &key parser)
   "Parse REQUEST body and store parsed data under :BODY in request data."
