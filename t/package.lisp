@@ -540,9 +540,9 @@
 
 (5am:def-test rate-limit-returns-remaining-count ()
   (let ((limiter (wst.throttle:rate-limit :max-requests 3 :window-seconds 60)))
-    (multiple-value-bind (allowed-p _retry remaining)
+    (multiple-value-bind (allowed-p retry-after remaining)
         (funcall limiter :k)
-      (declare (ignore _retry))
+      (declare (ignore retry-after))
       (5am:is-true allowed-p)
       (5am:is (= 2 remaining)))))
 
