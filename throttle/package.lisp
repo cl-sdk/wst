@@ -98,7 +98,7 @@ Suitable for single-process use; not thread-safe."))
 (defun rate-limit (&key
                      (max-requests 60)
                      (window-seconds 60)
-                     (store (make-instance 'memory-store)))
+                     (store nil))
   "Creates a fixed-window rate-limiter closure.
 
 The returned closure accepts a single KEY argument and returns three values:
@@ -106,8 +106,10 @@ The returned closure accepts a single KEY argument and returns three values:
 - RETRY-AFTER-SECONDS: Seconds until the current window resets.
 - REMAINING:           Calls remaining in the window (0 when throttled).
 
-The STORE argument must implement the wst.throttle.store protocol."
-  (lambda (key)
+STORE must implement the wst.throttle.store protocol. When NIL (the default),
+a fresh MEMORY-STORE is used."
+  (let ((store (or store (make-instance 'memory-store))))
+    (lambda (key)
     (let ((now (get-universal-time)))
       (multiple-value-bind (count start)
           (fetch-window store key)
@@ -125,5 +127,5 @@ The STORE argument must implement the wst.throttle.store protocol."
               (values nil retry-after-seconds 0)
               (progn
                 (save-window store key (1+ count) start)
-                (values t retry-after-seconds remaining))))))))
+                (values t retry-after-seconds remaining)))))))))
 
