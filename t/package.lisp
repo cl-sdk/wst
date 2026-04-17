@@ -105,69 +105,57 @@
 
 ;;; request body parsing
 
-(5am:def-test request-content-type->parser-maps-known-content-types ()
+(5am:def-test content-type->parser-maps-known-content-types ()
   (5am:is (eql :json
-               (wst.routing:request-content-type->parser
+               (wst.body:content-type->parser
                 "application/json; charset=utf-8")))
   (5am:is (eql :form-urlencoded
-               (wst.routing:request-content-type->parser
+               (wst.body:content-type->parser
                 "application/x-www-form-urlencoded")))
   (5am:is (eql :raw
-               (wst.routing:request-content-type->parser
+               (wst.body:content-type->parser
                 "text/plain"))))
 
-(5am:def-test parse-request-body-parses-json-and-stores-body-in-request-data ()
-  (let* ((request (wst.routing:make-request :content "1"
-                                            :content-type "application/json"))
-         (parsed (wst.routing:parse-request-body request)))
-    (5am:is (= 1 parsed))
-    (5am:is (= 1 (getf (wst.routing:request-data request) :body)))))
+(5am:def-test parse-body-parses-json ()
+  (5am:is (= 1 (wst.body:parse-body :json "1"))))
 
-(5am:def-test parse-request-body-parses-form-urlencoded-content ()
-  (let* ((request (wst.routing:make-request
-                   :content "name=alice+smith&email=alice%40test.dev"
-                   :content-type "application/x-www-form-urlencoded"))
-         (parsed (wst.routing:parse-request-body request)))
-    (5am:is (equal '(("name" . "alice smith") ("email" . "alice@test.dev")) parsed))
-    (5am:is (equal '(("name" . "alice smith") ("email" . "alice@test.dev"))
-                   (getf (wst.routing:request-data request) :body)))))
+(5am:def-test parse-body-parses-form-urlencoded-content ()
+  (5am:is (equal '(("name" . "alice smith") ("email" . "alice@test.dev"))
+                 (wst.body:parse-body :form-urlencoded
+                                      "name=alice+smith&email=alice%40test.dev"))))
 
-(5am:def-test parse-request-body-uses-raw-parser-for-unknown-content-type ()
-  (let ((request (wst.routing:make-request :content "hello"
-                                           :content-type "text/plain")))
-    (5am:is (string= "hello"
-                     (wst.routing:parse-request-body request)))))
+(5am:def-test parse-body-uses-raw-parser-for-unknown-content-type ()
+  (5am:is (string= "hello"
+                   (wst.body:parse-body
+                    (wst.body:content-type->parser "text/plain")
+                    "hello"))))
 
-(5am:def-test parse-request-body-signals-on-unknown-parser ()
+(5am:def-test parse-body-signals-on-unknown-parser ()
   (5am:signals error
-    (wst.routing:parse-request-body (wst.routing:make-request :content "hello")
-                                    :parser :unknown)))
+    (wst.body:parse-body :unknown "hello")))
 
-(5am:def-test request-content-as-string-reads-from-pathname ()
+(5am:def-test content-as-string-reads-from-pathname ()
   (let ((path (merge-pathnames
-               (make-pathname :name (format nil "wst-request-content-~a" (gensym "TMP-"))
+               (make-pathname :name (format nil "wst-body-content-~a" (gensym "TMP-"))
                               :type "txt")
                (uiop:temporary-directory))))
     (unwind-protect
          (progn
            (with-open-file (out path :direction :output :if-exists :supersede)
              (write-string "hello file" out))
-           (let ((request (wst.routing:make-request :content path)))
-             (5am:is (string= "hello file"
-                              (wst.routing:request-content-as-string request)))))
+           (5am:is (string= "hello file"
+                            (wst.body:content-as-string path))))
       (when (probe-file path)
         (delete-file path)))))
 
-(5am:def-test request-content-as-string-reads-from-character-stream ()
-  (let ((request (wst.routing:make-request :content (make-string-input-stream "hello stream"))))
-    (5am:is (string= "hello stream"
-                     (wst.routing:request-content-as-string request)))))
+(5am:def-test content-as-string-reads-from-character-stream ()
+  (5am:is (string= "hello stream"
+                   (wst.body:content-as-string (make-string-input-stream "hello stream")))))
 
-(5am:def-test request-content-as-string-reads-from-binary-stream ()
-  (let* ((stream (flexi-streams:make-in-memory-input-stream #(104 101 108 108 111)))
-         (request (wst.routing:make-request :content stream)))
+(5am:def-test content-as-string-reads-from-binary-stream ()
+  (let ((stream (flexi-streams:make-in-memory-input-stream #(104 101 108 108 111))))
     (5am:is (string= "hello"
-                     (wst.routing:request-content-as-string request)))))
+                     (wst.body:content-as-string stream)))))
 
 ;;; parse-uri
 
