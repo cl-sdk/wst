@@ -552,6 +552,45 @@
     (multiple-value-bind (allowed-p) (funcall limiter :a) (5am:is-false allowed-p))
     (multiple-value-bind (allowed-p) (funcall limiter :b) (5am:is-true allowed-p))))
 
+(5am:def-test rate-limit-uses-custom-store ()
+  ;; A minimal custom store that records which operations were called.
+  (let ((calls nil))
+    (defclass recording-store ()
+      ((table :initform (make-hash-table :test #'equal) :reader recording-store-table)))
+    (defmethod wst.throttle.store:fetch-window ((s recording-store) key)
+      (push :fetch calls)
+      (let ((entry (gethash key (recording-store-table s))))
+        (if entry (values (car entry) (cdr entry)) (values nil nil))))
+    (defmethod wst.throttle.store:save-window ((s recording-store) key count start-time)
+      (push :save calls)
+      (setf (gethash key (recording-store-table s)) (cons count start-time)))
+    (defmethod wst.throttle.store:delete-window ((s recording-store) key)
+      (push :delete calls)
+      (remhash key (recording-store-table s)))
+    (let* ((store (make-instance 'recording-store))
+           (limiter (wst.throttle:rate-limit :max-requests 2 :window-seconds 60 :store store)))
+      (funcall limiter "k")
+      (funcall limiter "k")
+      (5am:is-true (member :fetch calls))
+      (5am:is-true (member :save calls)))))
+
+(5am:def-test memory-store-implements-store-protocol ()
+  (let ((store (make-instance 'wst.throttle:memory-store)))
+    ;; Initially empty
+    (multiple-value-bind (count start) (wst.throttle.store:fetch-window store "k")
+      (5am:is-false count)
+      (5am:is-false start))
+    ;; After saving, the values are retrievable
+    (wst.throttle.store:save-window store "k" 5 1000)
+    (multiple-value-bind (count start) (wst.throttle.store:fetch-window store "k")
+      (5am:is (= 5 count))
+      (5am:is (= 1000 start)))
+    ;; After deleting, the entry is gone
+    (wst.throttle.store:delete-window store "k")
+    (multiple-value-bind (count start) (wst.throttle.store:fetch-window store "k")
+      (5am:is-false count)
+      (5am:is-false start))))
+
 ;;;
 ;;; wst.routing.woo suite
 ;;;

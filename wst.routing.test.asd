@@ -13,6 +13,7 @@
                #:wst.routing.dsl
                #:wst.routing.woo
                #:wst.routing.response.dsl
+               #:wst.throttle.store
                #:wst.throttle)
   :pathname "t"
   :serial t
