@@ -125,11 +125,11 @@
 
 (5am:def-test parse-request-body-parses-form-urlencoded-content ()
   (let* ((request (wst.routing:make-request
-                   :content "name=alice&count=2"
+                   :content "name=alice+smith&email=alice%40test.dev"
                    :content-type "application/x-www-form-urlencoded"))
          (parsed (wst.routing:parse-request-body request)))
-    (5am:is (equal '(("name" . "alice") ("count" . "2")) parsed))
-    (5am:is (equal '(("name" . "alice") ("count" . "2"))
+    (5am:is (equal '(("name" . "alice smith") ("email" . "alice@test.dev")) parsed))
+    (5am:is (equal '(("name" . "alice smith") ("email" . "alice@test.dev"))
                    (getf (wst.routing:request-data request) :body)))))
 
 (5am:def-test parse-request-body-uses-raw-parser-for-unknown-content-type ()
@@ -138,18 +138,11 @@
     (5am:is (string= "hello"
                      (wst.routing:parse-request-body request)))))
 
-(5am:def-test parse-request-body-parses-s-expression-content ()
-  (let* ((request (wst.routing:make-request :content "(1 2 3)"
-                                            :content-type "application/s-expression"))
-         (parsed (wst.routing:parse-request-body request)))
-    (5am:is (equal '(1 2 3) parsed))
-    (5am:is (equal '(1 2 3) (getf (wst.routing:request-data request) :body)))))
-
 (5am:def-test request-content-as-string-reads-from-pathname ()
   (let ((path (merge-pathnames
                (make-pathname :name (format nil "wst-request-content-~a" (gensym "TMP-"))
                               :type "txt")
-               #P"/tmp/")))
+               (uiop:temporary-directory))))
     (unwind-protect
          (progn
            (with-open-file (out path :direction :output :if-exists :supersede)

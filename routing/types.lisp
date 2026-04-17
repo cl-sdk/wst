@@ -45,7 +45,6 @@ Slots:
       ((or (null normalized) (string= normalized "")) :raw)
       ((string= normalized "application/json") :json)
       ((string= normalized "application/x-www-form-urlencoded") :form-urlencoded)
-      ((string= normalized "application/s-expression") :s-expression)
       (t :raw))))
 
 (defun request-content-as-string (request)
@@ -67,13 +66,37 @@ Slots:
 
 (defun parse-form-urlencoded-content (content)
   "Parse CONTENT in application/x-www-form-urlencoded format."
+  (flet ((url-decode-component (value)
+           (let ((size (length value))
+                 (index 0))
+             (with-output-to-string (out)
+               (loop :while (< index size)
+                     :do (let ((char (char value index)))
+                           (cond
+                             ((char= char #\+)
+                              (write-char #\Space out)
+                              (incf index))
+                             ((and (char= char #\%)
+                                   (<= (+ index 2) (1- size)))
+                              (let* ((h1 (digit-char-p (char value (1+ index)) 16))
+                                     (h2 (digit-char-p (char value (+ index 2)) 16)))
+                                (if (and h1 h2)
+                                    (progn
+                                      (write-char (code-char (+ (* h1 16) h2)) out)
+                                      (incf index 3))
+                                    (progn
+                                      (write-char char out)
+                                      (incf index)))))
+                             (t
+                              (write-char char out)
+                              (incf index)))))))))
   (loop :for pair :in (str:split "&" content)
         :unless (string= pair "")
           :collect (let ((separator (position #\= pair)))
                      (if separator
-                         (cons (subseq pair 0 separator)
-                               (subseq pair (1+ separator)))
-                         (cons pair "")))))
+                         (cons (url-decode-component (subseq pair 0 separator))
+                               (url-decode-component (subseq pair (1+ separator))))
+                         (cons (url-decode-component pair) "")))))
 
 (defgeneric parse-request-content (type request)
   (:documentation "Parse REQUEST content using parser TYPE.")
@@ -83,9 +106,6 @@ Slots:
     (com.inuoe.jzon:parse (request-content-as-string request)))
   (:method ((type (eql :form-urlencoded)) request)
     (parse-form-urlencoded-content (request-content-as-string request)))
-  (:method ((type (eql :s-expression)) request)
-    (let ((*read-eval* nil))
-      (read-from-string (request-content-as-string request))))
   (:method ((type t) request)
     (parse-request-content :raw request)))
 
