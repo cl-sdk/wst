@@ -1,15 +1,15 @@
-(defpackage #:wst.request-accept-content
+(defpackage #:wst.request-content
   (:use #:cl)
   (:import-from #:str
                 #:split)
   (:import-from #:flexi-streams
                 #:make-flexi-stream)
   (:export
-   #:parse-accept
+   #:parse-content-type
    #:content-as-string
    #:parse-content))
 
-(in-package :wst.request-accept-content)
+(in-package :wst.request-content)
 
 (defun %parse-mime-options (options-string)
   "Parse a semicolon-separated parameter string into an alist of (\"name\" . \"value\") pairs."
@@ -22,8 +22,8 @@
                                (string-trim '(#\Space #\Tab) (subseq trimmed (1+ pos))))
                          (cons trimmed "")))))
 
-(defun parse-accept (accept)
-  "Parse an HTTP Accept (or Content-Type) header value.
+(defun parse-content-type (content-type)
+  "Parse an HTTP Content-Type (or Accept) header value.
 
 Returns a list of (MIME-TYPE-KEYWORD . OPTIONS-ALIST) pairs, one per
 comma-separated entry.  MIME-TYPE-KEYWORD is the lowercased MIME type
@@ -32,17 +32,17 @@ interned in the keyword package (e.g. :|text/plain|, or
 \(\"name\" . \"value\") string pairs for any parameters (e.g. q, charset).
 
 Examples:
-  (parse-accept \"text/plain\")
+  (parse-content-type \"text/plain\")
   => ((:|text/plain|))
 
-  (parse-accept \"application/x-www-form-urlencoded; charset=utf-8\")
+  (parse-content-type \"application/x-www-form-urlencoded; charset=utf-8\")
   => ((:|application/x-www-form-urlencoded| (\"charset\" . \"utf-8\")))
 
-  (parse-accept \"text/plain, application/x-www-form-urlencoded; q=0.9\")
+  (parse-content-type \"text/plain, application/x-www-form-urlencoded; q=0.9\")
   => ((:|text/plain|) (:|application/x-www-form-urlencoded| (\"q\" . \"0.9\")))"
-  (when (and accept
-             (not (string= (string-trim '(#\Space #\Tab) accept) "")))
-    (loop :for entry :in (str:split "," accept)
+  (when (and content-type
+             (not (string= (string-trim '(#\Space #\Tab) content-type) "")))
+    (loop :for entry :in (str:split "," content-type)
           :for trimmed = (string-trim '(#\Space #\Tab) entry)
           :unless (string= trimmed "")
             :collect (let* ((semi (position #\; trimmed))
@@ -116,7 +116,7 @@ TYPE is the exact MIME type keyword (e.g. :|application/x-www-form-urlencoded|)
 or the special symbol :raw for pass-through.  CONTENT is the raw body value
 \(string or stream).  ENCODING is the charset keyword used when decoding a
 binary stream (e.g. :us-ascii, :utf-8); it should be extracted from the
-Content-Type header via parse-accept and defaults to :us-ascii.
+Content-Type header via parse-content-type and defaults to :us-ascii.
 
 The built-in :raw method returns CONTENT coerced to a string without further
 parsing.  Any unrecognized TYPE signals an error; callers must add a method

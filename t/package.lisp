@@ -103,23 +103,23 @@
     (wst.routing:with-response-data (token) rs
       (5am:is (string-equal token "abc")))))
 
-;;; wst.request-accept-content
+;;; wst.request-content
 
-(5am:def-test parse-accept-parses-simple-type ()
-  (let ((result (wst.request-accept-content:parse-accept "text/plain")))
+(5am:def-test parse-content-type-parses-simple-type ()
+  (let ((result (wst.request-content:parse-content-type "text/plain")))
     (5am:is (= 1 (length result)))
     (5am:is (eql :|text/plain| (car (first result))))
     (5am:is (null (cdr (first result))))))
 
-(5am:def-test parse-accept-parses-type-with-options ()
-  (let ((result (wst.request-accept-content:parse-accept
+(5am:def-test parse-content-type-parses-type-with-options ()
+  (let ((result (wst.request-content:parse-content-type
                  "application/x-www-form-urlencoded; charset=utf-8")))
     (5am:is (= 1 (length result)))
     (5am:is (eql :|application/x-www-form-urlencoded| (car (first result))))
     (5am:is (equal '(("charset" . "utf-8")) (cdr (first result))))))
 
-(5am:def-test parse-accept-parses-multiple-types ()
-  (let ((result (wst.request-accept-content:parse-accept
+(5am:def-test parse-content-type-parses-multiple-types ()
+  (let ((result (wst.request-content:parse-content-type
                  "text/plain, application/x-www-form-urlencoded; q=0.9")))
     (5am:is (= 2 (length result)))
     (5am:is (eql :|text/plain| (car (first result))))
@@ -127,34 +127,34 @@
     (5am:is (eql :|application/x-www-form-urlencoded| (car (second result))))
     (5am:is (equal '(("q" . "0.9")) (cdr (second result))))))
 
-(5am:def-test parse-accept-returns-nil-for-empty-header ()
-  (5am:is (null (wst.request-accept-content:parse-accept nil)))
-  (5am:is (null (wst.request-accept-content:parse-accept "")))
-  (5am:is (null (wst.request-accept-content:parse-accept "   "))))
+(5am:def-test parse-content-type-returns-nil-for-empty-header ()
+  (5am:is (null (wst.request-content:parse-content-type nil)))
+  (5am:is (null (wst.request-content:parse-content-type "")))
+  (5am:is (null (wst.request-content:parse-content-type "   "))))
 
 (5am:def-test parse-content-parses-form-urlencoded ()
   (5am:is (equal '(("name" . "alice smith") ("email" . "alice@test.dev"))
-                 (wst.request-accept-content:parse-content
+                 (wst.request-content:parse-content
                   :|application/x-www-form-urlencoded|
                   "name=alice+smith&email=alice%40test.dev"))))
 
 (5am:def-test parse-content-returns-raw-content ()
   (5am:is (string= "hello"
-                   (wst.request-accept-content:parse-content :raw "hello"))))
+                   (wst.request-content:parse-content :raw "hello"))))
 
 (5am:def-test parse-content-signals-on-unknown-parser ()
   (5am:signals error
-    (wst.request-accept-content:parse-content :unknown "hello")))
+    (wst.request-content:parse-content :unknown "hello")))
 
 (5am:def-test content-as-string-reads-from-character-stream ()
   (5am:is (string= "hello stream"
-                   (wst.request-accept-content:content-as-string
+                   (wst.request-content:content-as-string
                     (make-string-input-stream "hello stream")))))
 
 (5am:def-test content-as-string-reads-from-binary-stream ()
   (let ((stream (flexi-streams:make-in-memory-input-stream #(104 101 108 108 111))))
     (5am:is (string= "hello"
-                     (wst.request-accept-content:content-as-string stream)))))
+                     (wst.request-content:content-as-string stream)))))
 
 ;;; parse-uri
 
@@ -764,31 +764,31 @@
     (5am:is (string-equal "{}" (wst.routing:response-content target)))))
 
 ;;;
-;;; wst.request-accept-content suite
+;;; wst.request-content suite
 ;;;
 
-(5am:def-suite wst.request-accept-content.suite
-  :description "Tests for the wst.request-accept-content package.")
+(5am:def-suite wst.request-content.suite
+  :description "Tests for the wst.request-content package.")
 
-(5am:in-suite wst.request-accept-content.suite)
+(5am:in-suite wst.request-content.suite)
 
 ;;; parse-content – user-defined parser
 
 ;; Register a user-defined parser for a custom MIME type at suite load time.
-(defmethod wst.request-accept-content:parse-content
+(defmethod wst.request-content:parse-content
     ((type (eql :|application/x-custom|)) content &optional (encoding :us-ascii))
   "Example user-defined parser: upper-cases the raw body string."
-  (string-upcase (wst.request-accept-content:content-as-string content encoding)))
+  (string-upcase (wst.request-content:content-as-string content encoding)))
 
 (5am:def-test user-defined-parser-is-called-for-custom-mime-type ()
   "Dispatching parse-content on a user-defined MIME keyword calls the custom method."
   (5am:is (string= "HELLO"
-                   (wst.request-accept-content:parse-content
+                   (wst.request-content:parse-content
                     :|application/x-custom| "hello"))))
 
 (5am:def-test user-defined-parser-receives-stream-content ()
   "The user-defined parser can call content-as-string to normalise its input."
   (let ((stream (make-string-input-stream "world")))
     (5am:is (string= "WORLD"
-                     (wst.request-accept-content:parse-content
+                     (wst.request-content:parse-content
                       :|application/x-custom| stream)))))
