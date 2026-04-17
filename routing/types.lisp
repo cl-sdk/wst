@@ -55,13 +55,15 @@ Slots:
       ((stringp content) content)
       ((pathnamep content) (read-file-string content))
       ((streamp content)
-       (let ((stream (if (subtypep (stream-element-type content) 'character)
-                         content
-                         (make-flexi-stream content :external-format :utf-8))))
-         (with-output-to-string (out)
-           (loop :for char = (read-char stream nil nil)
-                 :while char
-                 :do (write-char char out)))))
+       (handler-case
+           (let ((stream (if (subtypep (stream-element-type content) 'character)
+                             content
+                             (make-flexi-stream content :external-format :utf-8))))
+             (with-output-to-string (out)
+               (loop :for char = (read-char stream nil nil)
+                     :while char
+                     :do (write-char char out))))
+         (error () "")))
       (t (format nil "~a" content)))))
 
 (defun parse-form-urlencoded-content (content)
