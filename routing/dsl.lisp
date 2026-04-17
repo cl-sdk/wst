@@ -92,8 +92,8 @@ Available constructs:
                 #:hash
                 #:with-keys)
   (:import-from #:wst.routing
-                #:any-route-handler
                 #:add-route
+                #:any-route-handler
                 #:remove-route)
   (:import-from #:alexandria
                 #:ensure-list)
