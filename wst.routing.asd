@@ -5,8 +5,7 @@
   :version "0.0.1"
   :depends-on (#:alexandria
                #:str
-               #:cl-hash-util
-               #:serapeum)
+               #:cl-hash-util)
   :pathname "routing"
   :serial t
   :components ((:file "package")
