@@ -103,40 +103,52 @@
     (wst.routing:with-response-data (token) rs
       (5am:is (string-equal token "abc")))))
 
-;;; request body parsing
+;;; wst.request-accept-content
 
-(5am:def-test content-type->parser-maps-known-content-types ()
-  (5am:is (eql :json
-               (wst.body:content-type->parser
-                "application/json; charset=utf-8")))
-  (5am:is (eql :form-urlencoded
-               (wst.body:content-type->parser
-                "application/x-www-form-urlencoded")))
-  (5am:is (eql :raw
-               (wst.body:content-type->parser
-                "text/plain"))))
+(5am:def-test parse-accept-parses-simple-type ()
+  (let ((result (wst.request-accept-content:parse-accept "text/plain")))
+    (5am:is (= 1 (length result)))
+    (5am:is (eql :|text/plain| (car (first result))))
+    (5am:is (null (cdr (first result))))))
 
-(5am:def-test parse-body-parses-json ()
-  (5am:is (= 1 (wst.body:parse-body :json "1"))))
+(5am:def-test parse-accept-parses-type-with-options ()
+  (let ((result (wst.request-accept-content:parse-accept
+                 "application/x-www-form-urlencoded; charset=utf-8")))
+    (5am:is (= 1 (length result)))
+    (5am:is (eql :|application/x-www-form-urlencoded| (car (first result))))
+    (5am:is (equal '(("charset" . "utf-8")) (cdr (first result))))))
 
-(5am:def-test parse-body-parses-form-urlencoded-content ()
+(5am:def-test parse-accept-parses-multiple-types ()
+  (let ((result (wst.request-accept-content:parse-accept
+                 "text/plain, application/x-www-form-urlencoded; q=0.9")))
+    (5am:is (= 2 (length result)))
+    (5am:is (eql :|text/plain| (car (first result))))
+    (5am:is (null (cdr (first result))))
+    (5am:is (eql :|application/x-www-form-urlencoded| (car (second result))))
+    (5am:is (equal '(("q" . "0.9")) (cdr (second result))))))
+
+(5am:def-test parse-accept-returns-nil-for-empty-header ()
+  (5am:is (null (wst.request-accept-content:parse-accept nil)))
+  (5am:is (null (wst.request-accept-content:parse-accept "")))
+  (5am:is (null (wst.request-accept-content:parse-accept "   "))))
+
+(5am:def-test parse-content-parses-form-urlencoded ()
   (5am:is (equal '(("name" . "alice smith") ("email" . "alice@test.dev"))
-                 (wst.body:parse-body :form-urlencoded
-                                      "name=alice+smith&email=alice%40test.dev"))))
+                 (wst.request-accept-content:parse-content
+                  :form-urlencoded
+                  "name=alice+smith&email=alice%40test.dev"))))
 
-(5am:def-test parse-body-uses-raw-parser-for-unknown-content-type ()
+(5am:def-test parse-content-returns-raw-content ()
   (5am:is (string= "hello"
-                   (wst.body:parse-body
-                    (wst.body:content-type->parser "text/plain")
-                    "hello"))))
+                   (wst.request-accept-content:parse-content :raw "hello"))))
 
-(5am:def-test parse-body-signals-on-unknown-parser ()
+(5am:def-test parse-content-signals-on-unknown-parser ()
   (5am:signals error
-    (wst.body:parse-body :unknown "hello")))
+    (wst.request-accept-content:parse-content :unknown "hello")))
 
 (5am:def-test content-as-string-reads-from-pathname ()
   (let ((path (merge-pathnames
-               (make-pathname :name (format nil "wst-body-content-~a" (gensym "TMP-"))
+               (make-pathname :name (format nil "wst-content-~a" (gensym "TMP-"))
                               :type "txt")
                (uiop:temporary-directory))))
     (unwind-protect
@@ -144,18 +156,19 @@
            (with-open-file (out path :direction :output :if-exists :supersede)
              (write-string "hello file" out))
            (5am:is (string= "hello file"
-                            (wst.body:content-as-string path))))
+                            (wst.request-accept-content:content-as-string path))))
       (when (probe-file path)
         (delete-file path)))))
 
 (5am:def-test content-as-string-reads-from-character-stream ()
   (5am:is (string= "hello stream"
-                   (wst.body:content-as-string (make-string-input-stream "hello stream")))))
+                   (wst.request-accept-content:content-as-string
+                    (make-string-input-stream "hello stream")))))
 
 (5am:def-test content-as-string-reads-from-binary-stream ()
   (let ((stream (flexi-streams:make-in-memory-input-stream #(104 101 108 108 111))))
     (5am:is (string= "hello"
-                     (wst.body:content-as-string stream)))))
+                     (wst.request-accept-content:content-as-string stream)))))
 
 ;;; parse-uri
 

@@ -9,7 +9,7 @@
                #:cl-hash-util
                #:fiveam
                #:wst.http
-               #:wst.body
+               #:wst.request-accept-content
                #:wst.routing
                #:wst.routing.dsl
                #:wst.routing.woo

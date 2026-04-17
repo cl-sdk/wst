@@ -1,34 +1,60 @@
-(defpackage #:wst.body
+(defpackage #:wst.request-accept-content
   (:use #:cl)
   (:import-from #:str
                 #:split)
   (:import-from #:flexi-streams
                 #:make-flexi-stream)
-  (:import-from #:com.inuoe.jzon
-                #:parse)
   (:import-from #:uiop
                 #:read-file-string)
   (:export
-   #:content-type->parser
+   #:parse-accept
    #:content-as-string
-   #:parse-body))
+   #:parse-content))
 
-(in-package :wst.body)
+(in-package :wst.request-accept-content)
 
-(defun content-type->parser (content-type)
-  "Map CONTENT-TYPE string to a parser keyword.
+(defun %parse-mime-options (options-string)
+  "Parse a semicolon-separated parameter string into an alist of (\"name\" . \"value\") pairs."
+  (loop :for part :in (str:split ";" options-string)
+        :for trimmed = (string-trim '(#\Space #\Tab) part)
+        :unless (string= trimmed "")
+          :collect (let ((pos (position #\= trimmed)))
+                     (if pos
+                         (cons (string-trim '(#\Space #\Tab) (subseq trimmed 0 pos))
+                               (string-trim '(#\Space #\Tab) (subseq trimmed (1+ pos))))
+                         (cons trimmed "")))))
 
-Returns :json for application/json, :form-urlencoded for
-application/x-www-form-urlencoded, and :raw for anything else
-(including nil or empty string)."
-  (let ((normalized (and content-type
-                         (string-trim '(#\Space #\Tab)
-                                      (car (str:split ";" (string-downcase content-type)))))))
-    (cond
-      ((or (null normalized) (string= normalized "")) :raw)
-      ((string= normalized "application/json") :json)
-      ((string= normalized "application/x-www-form-urlencoded") :form-urlencoded)
-      (t :raw))))
+(defun parse-accept (accept)
+  "Parse an HTTP Accept (or Content-Type) header value.
+
+Returns a list of (MIME-TYPE-KEYWORD . OPTIONS-ALIST) pairs, one per
+comma-separated entry.  MIME-TYPE-KEYWORD is the lowercased MIME type
+interned in the keyword package (e.g. :|text/plain|, or
+:|application/x-www-form-urlencoded|).  OPTIONS-ALIST is a list of
+\(\"name\" . \"value\") string pairs for any parameters (e.g. q, charset).
+
+Examples:
+  (parse-accept \"text/plain\")
+  => ((:|text/plain|))
+
+  (parse-accept \"application/x-www-form-urlencoded; charset=utf-8\")
+  => ((:|application/x-www-form-urlencoded| (\"charset\" . \"utf-8\")))
+
+  (parse-accept \"text/plain, application/x-www-form-urlencoded; q=0.9\")
+  => ((:|text/plain|) (:|application/x-www-form-urlencoded| (\"q\" . \"0.9\")))"
+  (when (and accept
+             (not (string= (string-trim '(#\Space #\Tab) accept) "")))
+    (loop :for entry :in (str:split "," accept)
+          :for trimmed = (string-trim '(#\Space #\Tab) entry)
+          :unless (string= trimmed "")
+            :collect (let* ((semi (position #\; trimmed))
+                            (mime (string-trim '(#\Space #\Tab)
+                                               (if semi
+                                                   (subseq trimmed 0 semi)
+                                                   trimmed)))
+                            (opts (when semi
+                                    (%parse-mime-options (subseq trimmed (1+ semi))))))
+                       (cons (intern (string-downcase mime) :keyword) opts)))))
 
 (defun content-as-string (content)
   "Normalize CONTENT to a UTF-8 string.
@@ -83,18 +109,16 @@ printable value.  Returns an empty string for nil."
                                  (url-decode-component (subseq pair (1+ separator))))
                            (cons (url-decode-component pair) ""))))))
 
-(defgeneric parse-body (type content)
+(defgeneric parse-content (type content)
   (:documentation "Parse CONTENT using the parser identified by TYPE.
 
-TYPE is a keyword returned by CONTENT-TYPE->PARSER.
+TYPE is a keyword such as :form-urlencoded or :raw.
 CONTENT is the raw body value (string, pathname, stream, etc.).
 All state must be supplied as arguments; no request object is accessed.")
   (:method ((type (eql :raw)) content)
     content)
-  (:method ((type (eql :json)) content)
-    (com.inuoe.jzon:parse (content-as-string content)))
   (:method ((type (eql :form-urlencoded)) content)
     (%parse-form-urlencoded (content-as-string content)))
   (:method ((type t) content)
     (declare (ignore content))
-    (error "Unknown body parser type: ~s" type)))
+    (error "Unknown content parser type: ~s" type)))
