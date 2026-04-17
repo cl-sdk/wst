@@ -12,7 +12,10 @@
                #:wst.routing
                #:wst.routing.dsl
                #:wst.routing.woo
-               #:wst.routing.response.dsl)
+               #:wst.routing.response.dsl
+               #:wst.rate-limit.store
+               #:wst.rate-limit.memory-store
+               #:wst.rate-limit)
   :pathname "t"
   :serial t
   :components ((:file "package")))

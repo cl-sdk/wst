@@ -311,6 +311,16 @@
                   (wst.routing:dispatch-route-by-name
                    'a (wst.routing:make-request :uri "/" :method :GET))))))
 
+(def-route-testing respond-with-too-many-requests ()
+  (wst.routing:any-route-handler :GET
+                                 (lambda (request response)
+                                   (declare (ignorable request))
+                                   (wst.routing:too-many-requests-response t response)
+                                   response))
+  (5am:is (= 429 (wst.routing:response-status
+                  (wst.routing:dispatch-route-by-name
+                   'a (wst.routing:make-request :uri "/" :method :GET))))))
+
 (def-route-testing respond-with-unprocessable-entity ()
   (wst.routing:any-route-handler :GET
                                  (lambda (request response)
@@ -481,6 +491,111 @@
                                   (wst.routing:find-route-by-name 'route-a)))))
     (5am:is-true (equal :ok (car (wst.routing::route-custom
                                   (wst.routing:find-route-by-name 'route-b)))))))
+
+(def-route-testing rate-limit-throttles-after-limit-is-reached ()
+  ;; wst.rate-limit:rate-limit is a pure rate-limiter that knows nothing about
+  ;; requests or responses. Here we compose it into a DSL before-middleware
+  ;; by hand, using the three values it returns.
+  (let* ((limiter (wst.rate-limit:rate-limit :max-requests 1 :window-seconds 60))
+         (middleware (lambda (request response)
+                       (declare (ignorable request))
+                       (multiple-value-bind (allowed-p retry-after)
+                           (funcall limiter :global)
+                         (if allowed-p
+                             (cons :continue response)
+                             (cons :halt
+                                   (wst.routing:too-many-requests-response
+                                    t response
+                                    :headers (list :retry-after
+                                                   (format nil "~a" retry-after))))))))
+         (handler (lambda (req res)
+                    (declare (ignore req))
+                    (wst.routing:ok-response t res :content "ok")
+                    res)))
+    (wst.routing.dsl:build-webserver
+     `(wst.routing.dsl:wrap
+       :before ,middleware
+       :route (wst.routing.dsl:route :GET throttled "/" ,handler)))
+    (let ((first  (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET)))
+          (second (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET))))
+      (5am:is (= 200 (wst.routing:response-status first)))
+      (5am:is (= 429 (wst.routing:response-status second)))
+      (5am:is-true (getf (wst.routing:response-headers second) :retry-after)))))
+
+;;;
+;;; wst.rate-limit suite
+;;;
+
+(5am:def-suite wst.rate-limit.suite
+  :description "Tests for the wst.rate-limit package.")
+
+(5am:in-suite wst.rate-limit.suite)
+
+(5am:def-test rate-limit-allows-calls-up-to-max ()
+  (let ((limiter (wst.rate-limit:rate-limit :max-requests 3 :window-seconds 60)))
+    (multiple-value-bind (a) (funcall limiter :k) (5am:is-true a))
+    (multiple-value-bind (a) (funcall limiter :k) (5am:is-true a))
+    (multiple-value-bind (a) (funcall limiter :k) (5am:is-true a))
+    (multiple-value-bind (a) (funcall limiter :k) (5am:is-false a))))
+
+(5am:def-test rate-limit-returns-remaining-count ()
+  (let ((limiter (wst.rate-limit:rate-limit :max-requests 3 :window-seconds 60)))
+    (multiple-value-bind (allowed-p retry-after remaining)
+        (funcall limiter :k)
+      (declare (ignore retry-after))
+      (5am:is-true allowed-p)
+      (5am:is (= 2 remaining)))))
+
+(5am:def-test rate-limit-tracks-keys-independently ()
+  (let ((limiter (wst.rate-limit:rate-limit :max-requests 1 :window-seconds 60)))
+    (funcall limiter :a)
+    (multiple-value-bind (allowed-p) (funcall limiter :a) (5am:is-false allowed-p))
+    (multiple-value-bind (allowed-p) (funcall limiter :b) (5am:is-true allowed-p))))
+
+;;; A minimal custom store that records which operations were called.
+;;; Defined at the top level so DEFCLASS does not pollute a test closure.
+
+(defclass recording-store ()
+  ((table :initform (make-hash-table :test #'equal) :reader recording-store-table)
+   (calls :initform nil :accessor recording-store-calls)))
+
+(defmethod wst.rate-limit.store:fetch-window ((s recording-store) key)
+  (push :fetch (recording-store-calls s))
+  (let ((entry (gethash key (recording-store-table s))))
+    (if entry (values (car entry) (cdr entry)) (values nil nil))))
+
+(defmethod wst.rate-limit.store:save-window ((s recording-store) key count start-time)
+  (push :save (recording-store-calls s))
+  (setf (gethash key (recording-store-table s)) (cons count start-time)))
+
+(defmethod wst.rate-limit.store:delete-window ((s recording-store) key)
+  (push :delete (recording-store-calls s))
+  (remhash key (recording-store-table s)))
+
+(5am:def-test rate-limit-uses-custom-store ()
+  (let* ((store (make-instance 'recording-store))
+         (limiter (wst.rate-limit:rate-limit :max-requests 2 :window-seconds 60 :store store)))
+    (funcall limiter "k")
+    (funcall limiter "k")
+    (5am:is-true (member :fetch (recording-store-calls store)))
+    (5am:is-true (member :save (recording-store-calls store)))))
+
+(5am:def-test memory-store-implements-store-protocol ()
+  (let ((store (make-instance 'wst.rate-limit.memory-store:memory-store)))
+    ;; Initially empty
+    (multiple-value-bind (count start) (wst.rate-limit.store:fetch-window store "k")
+      (5am:is-false count)
+      (5am:is-false start))
+    ;; After saving, the values are retrievable
+    (wst.rate-limit.store:save-window store "k" 5 1000)
+    (multiple-value-bind (count start) (wst.rate-limit.store:fetch-window store "k")
+      (5am:is (= 5 count))
+      (5am:is (= 1000 start)))
+    ;; After deleting, the entry is gone
+    (wst.rate-limit.store:delete-window store "k")
+    (multiple-value-bind (count start) (wst.rate-limit.store:fetch-window store "k")
+      (5am:is-false count)
+      (5am:is-false start))))
 
 ;;;
 ;;; wst.routing.woo suite
