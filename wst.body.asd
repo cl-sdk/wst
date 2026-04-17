@@ -5,6 +5,6 @@
   :version "0.0.1"
   :depends-on (#:str
                #:flexi-streams)
-  :pathname "body"
+  :pathname "request-accept-content"
   :serial t
   :components ((:file "package")))
