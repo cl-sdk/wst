@@ -54,18 +54,21 @@ Examples:
                                     (%parse-mime-options (subseq trimmed (1+ semi))))))
                        (cons (intern (string-downcase mime) :keyword) opts)))))
 
-(defun content-as-string (content)
-  "Normalize CONTENT to a UTF-8 string.
+(defun content-as-string (content &optional (encoding :us-ascii))
+  "Normalize CONTENT to a string.
 
 Accepts a string, character or binary stream, or any printable value.
-Returns an empty string for nil."
+Returns an empty string for nil.
+
+ENCODING is the external-format keyword used when decoding a binary stream
+\(e.g. :us-ascii, :utf-8).  Defaults to :us-ascii."
   (cond
     ((null content) "")
     ((stringp content) content)
     ((streamp content)
      (let ((stream (if (subtypep (stream-element-type content) 'character)
                        content
-                       (flexi-streams:make-flexi-stream content :external-format :utf-8))))
+                       (flexi-streams:make-flexi-stream content :external-format encoding))))
        (with-output-to-string (out)
          (loop :for char = (read-char stream nil nil)
                :while char
