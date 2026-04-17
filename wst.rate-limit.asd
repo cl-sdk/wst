@@ -3,7 +3,8 @@
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.0.1"
-  :depends-on (#:wst.rate-limit.store)
+  :depends-on (#:wst.rate-limit.store
+               #:wst.rate-limit.memory-store)
   :pathname "throttle"
   :serial t
   :components ((:file "rate-limit")))

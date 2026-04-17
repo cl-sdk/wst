@@ -581,7 +581,7 @@
     (5am:is-true (member :save (recording-store-calls store)))))
 
 (5am:def-test memory-store-implements-store-protocol ()
-  (let ((store (make-instance 'wst.rate-limit:memory-store)))
+  (let ((store (make-instance 'wst.rate-limit.memory-store:memory-store)))
     ;; Initially empty
     (multiple-value-bind (count start) (wst.rate-limit.store:fetch-window store "k")
       (5am:is-false count)

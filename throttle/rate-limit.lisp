@@ -8,20 +8,10 @@ arbitrary key and can be composed with any middleware layer.
 
 The tracking state is held by a pluggable storage backend that
 implements the wst.rate-limit.store protocol (fetch-window / save-window
-/ delete-window). A built-in MEMORY-STORE backed by a hash table is
-provided and used by default.
+/ delete-window). A built-in MEMORY-STORE is provided by the
+wst.rate-limit.memory-store package.
 
 Provides:
-
-  • MEMORY-STORE
-    A built-in in-memory storage backend.
-
-    Syntax:
-      (make-instance 'memory-store)
-
-    Stores window state in a hash table keyed by EQUAL. Suitable for
-    single-process use; not thread-safe.
-
 
   • RATE-LIMIT
     Creates a fixed-window rate-limiter closure.
@@ -60,36 +50,12 @@ Provides:
                 #:fetch-window
                 #:save-window
                 #:delete-window)
+  (:import-from #:wst.rate-limit.memory-store
+                #:memory-store)
   (:export
-   #:memory-store
    #:rate-limit))
 
 (in-package #:wst.rate-limit)
-
-;;;
-;;; Built-in in-memory storage backend
-;;;
-
-(defclass memory-store ()
-  ((table :initform (make-hash-table :test #'equal)
-          :reader memory-store-table))
-  (:documentation "A simple in-memory rate-limit store backed by a hash table.
-Suitable for single-process use; not thread-safe."))
-
-(defmethod wst.rate-limit.store:fetch-window ((store memory-store) key)
-  "Returns (values count start-time) if an entry for KEY exists, (values nil nil) otherwise."
-  (let ((entry (gethash key (memory-store-table store))))
-    (if entry
-        (values (car entry) (cdr entry))
-        (values nil nil))))
-
-(defmethod wst.rate-limit.store:save-window ((store memory-store) key count start-time)
-  "Stores COUNT and START-TIME for KEY in the hash table."
-  (setf (gethash key (memory-store-table store)) (cons count start-time)))
-
-(defmethod wst.rate-limit.store:delete-window ((store memory-store) key)
-  "Removes the entry for KEY from the hash table."
-  (remhash key (memory-store-table store)))
 
 ;;;
 ;;; Rate limiter
