@@ -103,6 +103,41 @@
     (wst.routing:with-response-data (token) rs
       (5am:is (string-equal token "abc")))))
 
+;;; request body parsing
+
+(5am:def-test request-content-type->parser-maps-known-content-types ()
+  (5am:is (eql :json
+               (wst.routing:request-content-type->parser
+                "application/json; charset=utf-8")))
+  (5am:is (eql :form-urlencoded
+               (wst.routing:request-content-type->parser
+                "application/x-www-form-urlencoded")))
+  (5am:is (eql :raw
+               (wst.routing:request-content-type->parser
+                "text/plain"))))
+
+(5am:def-test parse-request-body-parses-json-and-stores-body-in-request-data ()
+  (let* ((request (wst.routing:make-request :content "1"
+                                            :content-type "application/json"))
+         (parsed (wst.routing:parse-request-body request)))
+    (5am:is (= 1 parsed))
+    (5am:is (= 1 (getf (wst.routing:request-data request) :body)))))
+
+(5am:def-test parse-request-body-parses-form-urlencoded-content ()
+  (let* ((request (wst.routing:make-request
+                   :content "name=alice&count=2"
+                   :content-type "application/x-www-form-urlencoded"))
+         (parsed (wst.routing:parse-request-body request)))
+    (5am:is (equal '(("name" . "alice") ("count" . "2")) parsed))
+    (5am:is (equal '(("name" . "alice") ("count" . "2"))
+                   (getf (wst.routing:request-data request) :body)))))
+
+(5am:def-test parse-request-body-uses-raw-parser-for-unknown-content-type ()
+  (let ((request (wst.routing:make-request :content "hello"
+                                           :content-type "text/plain")))
+    (5am:is (string= "hello"
+                     (wst.routing:parse-request-body request)))))
+
 ;;; parse-uri
 
 (5am:def-test parse-request-uri-just-path ()

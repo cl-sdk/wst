@@ -36,6 +36,70 @@ Slots:
   (content "" :type string)
   (data nil :type list))
 
+(defun request-content-type->parser (content-type)
+  "Map CONTENT-TYPE to a request parser keyword."
+  (let ((normalized (and content-type
+                         (string-trim '(#\Space #\Tab)
+                                      (car (str:split ";" (string-downcase content-type)))))))
+    (cond
+      ((or (null normalized) (string= normalized "")) :raw)
+      ((string= normalized "application/json") :json)
+      ((string= normalized "application/x-www-form-urlencoded") :form-urlencoded)
+      ((string= normalized "application/s-expression") :s-expression)
+      (t :raw))))
+
+(defun request-content-as-string (request)
+  "Normalize request content to a UTF-8 string."
+  (let ((content (request-content request)))
+    (cond
+      ((null content) "")
+      ((stringp content) content)
+      ((pathnamep content) (read-file-string content))
+      ((streamp content)
+       (let ((stream (if (subtypep (stream-element-type content) 'character)
+                         content
+                         (make-flexi-stream content :external-format :utf-8))))
+         (with-output-to-string (out)
+           (loop :for char = (read-char stream nil nil)
+                 :while char
+                 :do (write-char char out)))))
+      (t (format nil "~a" content)))))
+
+(defun parse-form-urlencoded-content (content)
+  "Parse CONTENT in application/x-www-form-urlencoded format."
+  (loop :for pair :in (str:split "&" content)
+        :unless (string= pair "")
+          :collect (let ((separator (position #\= pair)))
+                     (if separator
+                         (cons (subseq pair 0 separator)
+                               (subseq pair (1+ separator)))
+                         (cons pair "")))))
+
+(defgeneric parse-request-content (type request)
+  (:documentation "Parse REQUEST content using parser TYPE.")
+  (:method ((type (eql :raw)) request)
+    (request-content request))
+  (:method ((type (eql :json)) request)
+    (parse (request-content-as-string request)))
+  (:method ((type (eql :form-urlencoded)) request)
+    (parse-form-urlencoded-content (request-content-as-string request)))
+  (:method ((type (eql :s-expression)) request)
+    (let ((*read-eval* nil))
+      (read-from-string (request-content-as-string request))))
+  (:method ((type t) request)
+    (parse-request-content :raw request)))
+
+(defun parse-request-body (request &key parser)
+  "Parse REQUEST body and store parsed data under :BODY in request data."
+  (let* ((data (request-data request))
+         (parser (or parser
+                     (request-content-type->parser
+                      (request-content-type request))))
+         (body (parse-request-content parser request)))
+    (setf (getf data :body) body
+          (request-data request) data)
+    body))
+
 (defvar *routes* nil
   "Hash table storing all registered routes for request handling.")
 

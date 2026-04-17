@@ -48,6 +48,10 @@
    #:response-content
    #:response-data
    #:request-content-length
+   #:request-content-type->parser
+   #:request-content-as-string
+   #:parse-request-content
+   #:parse-request-body
    #:write-response
    #:unprocessable-entity
    #:parse-uri
