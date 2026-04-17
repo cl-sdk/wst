@@ -80,7 +80,7 @@ Slots:
   (:method ((type (eql :raw)) request)
     (request-content request))
   (:method ((type (eql :json)) request)
-    (parse (request-content-as-string request)))
+    (com.inuoe.jzon:parse (request-content-as-string request)))
   (:method ((type (eql :form-urlencoded)) request)
     (parse-form-urlencoded-content (request-content-as-string request)))
   (:method ((type (eql :s-expression)) request)
@@ -91,13 +91,13 @@ Slots:
 
 (defun parse-request-body (request &key parser)
   "Parse REQUEST body and store parsed data under :BODY in request data."
-  (let* ((data (request-data request))
+  (let* ((request-data-plist (request-data request))
          (parser (or parser
                      (request-content-type->parser
                       (request-content-type request))))
          (body (parse-request-content parser request)))
-    (setf (getf data :body) body
-          (request-data request) data)
+    (setf (getf request-data-plist :body) body
+          (request-data request) request-data-plist)
     body))
 
 (defvar *routes* nil
