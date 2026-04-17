@@ -515,6 +515,139 @@
     (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))
     (5am:is (= 3 count))))
 
+;;;
+;;; wst.circuit-breaker suite (pure state machine, no HTTP)
+;;;
+
+(5am:def-suite wst.circuit-breaker.suite
+  :description "Tests for the pure wst.circuit-breaker package.")
+
+(5am:in-suite wst.circuit-breaker.suite)
+
+(5am:def-test circuit-breaker-starts-in-closed-state ()
+  (let ((cb (wst.circuit-breaker:make-circuit-breaker :failure-threshold 2 :recovery-timeout 10)))
+    (5am:is (eq :allowed (wst.circuit-breaker:circuit-breaker-check cb)))))
+
+(5am:def-test circuit-breaker-opens-after-failure-threshold-pure ()
+  (let ((cb (wst.circuit-breaker:make-circuit-breaker :failure-threshold 2 :recovery-timeout 10)))
+    (wst.circuit-breaker:circuit-breaker-record cb t)
+    (5am:is (eq :allowed (wst.circuit-breaker:circuit-breaker-check cb)))
+    (wst.circuit-breaker:circuit-breaker-record cb t)
+    (5am:is (eq :blocked (wst.circuit-breaker:circuit-breaker-check cb)))))
+
+(5am:def-test circuit-breaker-success-resets-failure-count ()
+  (let ((cb (wst.circuit-breaker:make-circuit-breaker :failure-threshold 2 :recovery-timeout 10)))
+    (wst.circuit-breaker:circuit-breaker-record cb t)
+    (wst.circuit-breaker:circuit-breaker-record cb nil)
+    (wst.circuit-breaker:circuit-breaker-record cb t)
+    (5am:is (eq :allowed (wst.circuit-breaker:circuit-breaker-check cb)))))
+
+(5am:def-test circuit-breaker-transitions-to-half-open-after-timeout ()
+  (let* ((now 0)
+         (cb (wst.circuit-breaker:make-circuit-breaker
+              :failure-threshold 1
+              :recovery-timeout 10
+              :clock (lambda () now))))
+    (wst.circuit-breaker:circuit-breaker-record cb t)
+    (5am:is (eq :blocked (wst.circuit-breaker:circuit-breaker-check cb)))
+    (setf now 11)
+    (5am:is (eq :allowed (wst.circuit-breaker:circuit-breaker-check cb)))))
+
+(5am:def-test circuit-breaker-closes-on-half-open-success ()
+  (let* ((now 0)
+         (cb (wst.circuit-breaker:make-circuit-breaker
+              :failure-threshold 1
+              :recovery-timeout 10
+              :clock (lambda () now))))
+    (wst.circuit-breaker:circuit-breaker-record cb t)
+    (setf now 11)
+    (wst.circuit-breaker:circuit-breaker-check cb)
+    (wst.circuit-breaker:circuit-breaker-record cb nil)
+    (5am:is (eq :allowed (wst.circuit-breaker:circuit-breaker-check cb)))))
+
+(5am:def-test circuit-breaker-reopens-on-half-open-failure ()
+  (let* ((now 0)
+         (cb (wst.circuit-breaker:make-circuit-breaker
+              :failure-threshold 1
+              :recovery-timeout 10
+              :clock (lambda () now))))
+    (wst.circuit-breaker:circuit-breaker-record cb t)
+    (setf now 11)
+    (wst.circuit-breaker:circuit-breaker-check cb)
+    (wst.circuit-breaker:circuit-breaker-record cb t)
+    (5am:is (eq :blocked (wst.circuit-breaker:circuit-breaker-check cb)))))
+
+;;;
+;;; circuit breaker HTTP adapter (wst.routing.dsl integration) suite
+;;;
+
+(5am:in-suite wst.routing.dsl.suite)
+
+(def-route-testing circuit-breaker-opens-after-failure-threshold ()
+  (let* ((now 0)
+         (count 0)
+         (cb (wst.circuit-breaker.routing:circuit-breaker
+              :failure-threshold 2
+              :recovery-timeout 30
+              :clock (lambda () now)))
+         (before (getf cb :before))
+         (after (getf cb :after))
+         (handler (lambda (req res)
+                    (declare (ignore req))
+                    (incf count)
+                    (setf (wst.routing:response-status res) 500)
+                    res)))
+    (wst.routing.dsl:build-webserver
+     `(wst.routing.dsl:wrap
+       :before ,before
+       :after ,after
+       :route (wst.routing.dsl:route :GET index "/" ,handler)))
+    (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))
+    (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))
+    (let ((blocked-a (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET)))
+          (blocked-b (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))))
+      (5am:is (= 2 count))
+      (5am:is (= 503 (wst.routing:response-status blocked-a)))
+      (5am:is (string-equal "service unavailable" (wst.routing:response-content blocked-a)))
+      (5am:is (= 503 (wst.routing:response-status blocked-b)))
+      (5am:is (string-equal "service unavailable" (wst.routing:response-content blocked-b))))))
+
+(def-route-testing circuit-breaker-half-open-recovery-closes-on-success ()
+  (let* ((now 0)
+         (count 0)
+         (should-fail t)
+         (cb (wst.circuit-breaker.routing:circuit-breaker
+              :failure-threshold 1
+              :recovery-timeout 10
+              :clock (lambda () now)))
+         (before (getf cb :before))
+         (after (getf cb :after))
+         (handler (lambda (req res)
+                    (declare (ignore req))
+                    (incf count)
+                    (setf (wst.routing:response-status res) (if should-fail 500 200))
+                    res)))
+    (wst.routing.dsl:build-webserver
+     `(wst.routing.dsl:wrap
+       :before ,before
+       :after ,after
+       :route (wst.routing.dsl:route :GET index "/" ,handler)))
+    (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))
+    (let ((blocked (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))))
+      (5am:is (= 503 (wst.routing:response-status blocked))))
+    (setf now 11
+          should-fail nil)
+    (let ((half-open-success (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET)))
+          (after-closed (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))))
+      (5am:is (= 200 (wst.routing:response-status half-open-success)))
+      (5am:is (= 200 (wst.routing:response-status after-closed)))
+      (5am:is (= 3 count)))
+    (setf should-fail t)
+    (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))
+    (let ((blocked-again (wst.routing:dispatch-route-by-name 'index (wst.routing:make-request :method :GET))))
+      (5am:is (= 503 (wst.routing:response-status blocked-again)))
+      (5am:is (= 4 count)))))
+
 (def-route-testing build-group-of-routes ()
   (let* ((count 0)
          (handler (lambda (req res)

@@ -10,6 +10,8 @@
                #:fiveam
                #:wst.http
                #:wst.request-content
+               #:wst.circuit-breaker
+               #:wst.circuit-breaker.routing
                #:wst.routing
                #:wst.routing.dsl
                #:wst.routing.woo
