@@ -112,13 +112,14 @@ printable value.  Returns an empty string for nil."
 (defgeneric parse-content (type content)
   (:documentation "Parse CONTENT using the parser identified by TYPE.
 
-TYPE is a keyword such as :form-urlencoded or :raw.
-CONTENT is the raw body value (string, pathname, stream, etc.).
-All state must be supplied as arguments; no request object is accessed.")
-  (:method ((type (eql :raw)) content)
-    content)
-  (:method ((type (eql :form-urlencoded)) content)
+TYPE is the exact MIME type keyword (e.g. :|application/x-www-form-urlencoded|,
+:|application/json|).  CONTENT is the raw body value (string, pathname, stream,
+etc.).  All state must be supplied as arguments; no request object is accessed.
+
+The default method (any unrecognised TYPE) treats the content as text/plain and
+returns it unchanged.")
+  (:method ((type (eql :|application/x-www-form-urlencoded|)) content)
     (%parse-form-urlencoded (content-as-string content)))
-  (:method ((type t) content)
-    (declare (ignore content))
-    (error "Unknown content parser type: ~s" type)))
+  (:method (type content)
+    (declare (ignore type))
+    content))
