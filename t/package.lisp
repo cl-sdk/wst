@@ -138,6 +138,39 @@
     (5am:is (string= "hello"
                      (wst.routing:parse-request-body request)))))
 
+(5am:def-test parse-request-body-parses-s-expression-content ()
+  (let* ((request (wst.routing:make-request :content "(1 2 3)"
+                                            :content-type "application/s-expression"))
+         (parsed (wst.routing:parse-request-body request)))
+    (5am:is (equal '(1 2 3) parsed))
+    (5am:is (equal '(1 2 3) (getf (wst.routing:request-data request) :body)))))
+
+(5am:def-test request-content-as-string-reads-from-pathname ()
+  (let ((path (merge-pathnames
+               (make-pathname :name (format nil "wst-request-content-~a" (gensym "TMP-"))
+                              :type "txt")
+               #P"/tmp/")))
+    (unwind-protect
+         (progn
+           (with-open-file (out path :direction :output :if-exists :supersede)
+             (write-string "hello file" out))
+           (let ((request (wst.routing:make-request :content path)))
+             (5am:is (string= "hello file"
+                              (wst.routing:request-content-as-string request)))))
+      (when (probe-file path)
+        (delete-file path)))))
+
+(5am:def-test request-content-as-string-reads-from-character-stream ()
+  (let ((request (wst.routing:make-request :content (make-string-input-stream "hello stream"))))
+    (5am:is (string= "hello stream"
+                     (wst.routing:request-content-as-string request)))))
+
+(5am:def-test request-content-as-string-reads-from-binary-stream ()
+  (let* ((stream (flexi-streams:make-in-memory-input-stream #(104 101 108 108 111)))
+         (request (wst.routing:make-request :content stream)))
+    (5am:is (string= "hello"
+                     (wst.routing:request-content-as-string request)))))
+
 ;;; parse-uri
 
 (5am:def-test parse-request-uri-just-path ()
