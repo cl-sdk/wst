@@ -4,8 +4,6 @@
                 #:split)
   (:import-from #:flexi-streams
                 #:make-flexi-stream)
-  (:import-from #:uiop
-                #:read-file-string)
   (:export
    #:parse-accept
    #:content-as-string
@@ -59,12 +57,11 @@ Examples:
 (defun content-as-string (content)
   "Normalize CONTENT to a UTF-8 string.
 
-Accepts a string, pathname, character or binary stream, or any
-printable value.  Returns an empty string for nil."
+Accepts a string, character or binary stream, or any printable value.
+Returns an empty string for nil."
   (cond
     ((null content) "")
     ((stringp content) content)
-    ((pathnamep content) (uiop:read-file-string content))
     ((streamp content)
      (let ((stream (if (subtypep (stream-element-type content) 'character)
                        content
