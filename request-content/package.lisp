@@ -13,18 +13,19 @@
 
 (defun %unquote-string (s)
   "If S is a quoted-string per RFC 7230, strip the surrounding DQUOTE delimiters
-and expand backslash-escaped characters.  Returns NIL when S is not quoted."
+and expand backslash-escaped characters.  Returns S unchanged when not quoted."
   (let ((len (length s)))
-    (when (and (>= len 2)
-               (char= (char s 0) #\")
-               (char= (char s (1- len)) #\"))
-      (with-output-to-string (out)
-        (loop :with i = 1
-              :while (< i (1- len))
-              :do (let ((c (char s i)))
-                    (if (and (char= c #\\) (< (1+ i) (1- len)))
-                        (progn (write-char (char s (1+ i)) out) (incf i 2))
-                        (progn (write-char c out) (incf i)))))))))
+    (if (and (>= len 2)
+             (char= (char s 0) #\")
+             (char= (char s (1- len)) #\"))
+        (with-output-to-string (out)
+          (loop :with i = 1
+                :while (< i (1- len))
+                :do (let ((c (char s i)))
+                      (if (and (char= c #\\) (< (1+ i) (1- len)))
+                          (progn (write-char (char s (1+ i)) out) (incf i 2))
+                          (progn (write-char c out) (incf i))))))
+        s)))
 
 (defun %parse-mime-options (options-string)
   "Parse a semicolon-separated parameter string into an alist of (\"name\" . \"value\") pairs.
@@ -41,7 +42,7 @@ Quoted-string parameter values are unquoted per RFC 7230 §3.2.6."
                                                        (subseq trimmed 0 pos))))
                                 (raw-val (string-trim '(#\Space #\Tab)
                                                       (subseq trimmed (1+ pos))))
-                                (val     (or (%unquote-string raw-val) raw-val)))
+                                (val     (%unquote-string raw-val)))
                            (cons name val))
                          (cons (string-downcase trimmed) "")))))
 
