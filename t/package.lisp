@@ -552,27 +552,33 @@
     (multiple-value-bind (allowed-p) (funcall limiter :a) (5am:is-false allowed-p))
     (multiple-value-bind (allowed-p) (funcall limiter :b) (5am:is-true allowed-p))))
 
+;;; A minimal custom store that records which operations were called.
+;;; Defined at the top level so DEFCLASS does not pollute a test closure.
+
+(defclass recording-store ()
+  ((table :initform (make-hash-table :test #'equal) :reader recording-store-table)
+   (calls :initform nil :accessor recording-store-calls)))
+
+(defmethod wst.throttle.store:fetch-window ((s recording-store) key)
+  (push :fetch (recording-store-calls s))
+  (let ((entry (gethash key (recording-store-table s))))
+    (if entry (values (car entry) (cdr entry)) (values nil nil))))
+
+(defmethod wst.throttle.store:save-window ((s recording-store) key count start-time)
+  (push :save (recording-store-calls s))
+  (setf (gethash key (recording-store-table s)) (cons count start-time)))
+
+(defmethod wst.throttle.store:delete-window ((s recording-store) key)
+  (push :delete (recording-store-calls s))
+  (remhash key (recording-store-table s)))
+
 (5am:def-test rate-limit-uses-custom-store ()
-  ;; A minimal custom store that records which operations were called.
-  (let ((calls nil))
-    (defclass recording-store ()
-      ((table :initform (make-hash-table :test #'equal) :reader recording-store-table)))
-    (defmethod wst.throttle.store:fetch-window ((s recording-store) key)
-      (push :fetch calls)
-      (let ((entry (gethash key (recording-store-table s))))
-        (if entry (values (car entry) (cdr entry)) (values nil nil))))
-    (defmethod wst.throttle.store:save-window ((s recording-store) key count start-time)
-      (push :save calls)
-      (setf (gethash key (recording-store-table s)) (cons count start-time)))
-    (defmethod wst.throttle.store:delete-window ((s recording-store) key)
-      (push :delete calls)
-      (remhash key (recording-store-table s)))
-    (let* ((store (make-instance 'recording-store))
-           (limiter (wst.throttle:rate-limit :max-requests 2 :window-seconds 60 :store store)))
-      (funcall limiter "k")
-      (funcall limiter "k")
-      (5am:is-true (member :fetch calls))
-      (5am:is-true (member :save calls)))))
+  (let* ((store (make-instance 'recording-store))
+         (limiter (wst.throttle:rate-limit :max-requests 2 :window-seconds 60 :store store)))
+    (funcall limiter "k")
+    (funcall limiter "k")
+    (5am:is-true (member :fetch (recording-store-calls store)))
+    (5am:is-true (member :save (recording-store-calls store)))))
 
 (5am:def-test memory-store-implements-store-protocol ()
   (let ((store (make-instance 'wst.throttle:memory-store)))

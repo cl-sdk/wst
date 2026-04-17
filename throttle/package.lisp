@@ -108,7 +108,7 @@ The returned closure accepts a single KEY argument and returns three values:
 
 The STORE argument must implement the wst.throttle.store protocol."
   (lambda (key)
-    (let* ((now (get-universal-time)))
+    (let ((now (get-universal-time)))
       (multiple-value-bind (count start)
           (fetch-window store key)
         ;; Lazily evict entries whose window has elapsed.
