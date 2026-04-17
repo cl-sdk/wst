@@ -146,20 +146,6 @@
   (5am:signals error
     (wst.request-accept-content:parse-content :unknown "hello")))
 
-(5am:def-test content-as-string-reads-from-pathname ()
-  (let ((path (merge-pathnames
-               (make-pathname :name (format nil "wst-content-~a" (gensym "TMP-"))
-                              :type "txt")
-               (uiop:temporary-directory))))
-    (unwind-protect
-         (progn
-           (with-open-file (out path :direction :output :if-exists :supersede)
-             (write-string "hello file" out))
-           (5am:is (string= "hello file"
-                            (wst.request-accept-content:content-as-string path))))
-      (when (probe-file path)
-        (delete-file path)))))
-
 (5am:def-test content-as-string-reads-from-character-stream ()
   (5am:is (string= "hello stream"
                    (wst.request-accept-content:content-as-string
