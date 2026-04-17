@@ -132,6 +132,21 @@
   (5am:is (null (wst.request-content:parse-content-type "")))
   (5am:is (null (wst.request-content:parse-content-type "   "))))
 
+(5am:def-test parse-content-type-unquotes-quoted-string-parameter ()
+  ;; RFC 7230 §3.2.6: parameter values may be quoted-strings
+  (let ((result (wst.request-content:parse-content-type
+                 "text/plain; charset=\"utf-8\"")))
+    (5am:is (= 1 (length result)))
+    (5am:is (eql :|text/plain| (car (first result))))
+    (5am:is (equal '(("charset" . "utf-8")) (cdr (first result))))))
+
+(5am:def-test parse-content-type-lowercases-parameter-names ()
+  ;; RFC 7231 §3.1.1.1: parameter names are case-insensitive
+  (let ((result (wst.request-content:parse-content-type
+                 "text/plain; Charset=utf-8")))
+    (5am:is (= 1 (length result)))
+    (5am:is (equal '(("charset" . "utf-8")) (cdr (first result))))))
+
 (5am:def-test parse-content-parses-form-urlencoded ()
   (5am:is (equal '(("name" . "alice smith") ("email" . "alice@test.dev"))
                  (wst.request-content:parse-content

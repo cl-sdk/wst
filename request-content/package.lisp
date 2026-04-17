@@ -11,16 +11,39 @@
 
 (in-package :wst.request-content)
 
+(defun %unquote-string (s)
+  "If S is a quoted-string per RFC 7230, strip the surrounding DQUOTE delimiters
+and expand backslash-escaped characters.  Returns NIL when S is not quoted."
+  (let ((len (length s)))
+    (when (and (>= len 2)
+               (char= (char s 0) #\")
+               (char= (char s (1- len)) #\"))
+      (with-output-to-string (out)
+        (loop :with i = 1
+              :while (< i (1- len))
+              :do (let ((c (char s i)))
+                    (if (and (char= c #\\) (< (1+ i) (1- len)))
+                        (progn (write-char (char s (1+ i)) out) (incf i 2))
+                        (progn (write-char c out) (incf i)))))))))
+
 (defun %parse-mime-options (options-string)
-  "Parse a semicolon-separated parameter string into an alist of (\"name\" . \"value\") pairs."
+  "Parse a semicolon-separated parameter string into an alist of (\"name\" . \"value\") pairs.
+
+Parameter names are lowercased per RFC 7231 §3.1.1.1 (names are case-insensitive).
+Quoted-string parameter values are unquoted per RFC 7230 §3.2.6."
   (loop :for part :in (str:split ";" options-string)
         :for trimmed = (string-trim '(#\Space #\Tab) part)
         :unless (string= trimmed "")
           :collect (let ((pos (position #\= trimmed)))
                      (if pos
-                         (cons (string-trim '(#\Space #\Tab) (subseq trimmed 0 pos))
-                               (string-trim '(#\Space #\Tab) (subseq trimmed (1+ pos))))
-                         (cons trimmed "")))))
+                         (let* ((name    (string-downcase
+                                          (string-trim '(#\Space #\Tab)
+                                                       (subseq trimmed 0 pos))))
+                                (raw-val (string-trim '(#\Space #\Tab)
+                                                      (subseq trimmed (1+ pos))))
+                                (val     (or (%unquote-string raw-val) raw-val)))
+                           (cons name val))
+                         (cons (string-downcase trimmed) "")))))
 
 (defun parse-content-type (content-type)
   "Parse an HTTP Content-Type (or Accept) header value.
