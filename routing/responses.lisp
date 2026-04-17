@@ -127,6 +127,22 @@ default method (for TY = T) returns a 400 status with a default message of
   (:method ((ty t) response &key)
     (write-response response :status 400 :content "bad request")))
 
+(defgeneric too-many-requests-response (ty response &key headers content)
+  (:documentation "Constructs an HTTP 429 Too Many Requests response based on the specified content type.
+
+- TY: A keyword indicating the desired response format. Supported values include
+      :json, :html, and T (which defaults to HTML).
+- RESPONSE: The response object used to build the final HTTP response.
+- :HEADERS (optional): A plist of additional HTTP headers to include in the response.
+- :CONTENT (optional): The body of the response. It will be serialized according to
+                       the specified type. Defaults to \"too many requests\".
+
+Dispatches on the TY argument to format and serialize the response appropriately.
+The default method (for TY = T) returns a 429 status with the given content and
+any provided headers.")
+  (:method ((ty t) response &key headers content)
+    (write-response response :status 429 :headers headers :content (or content "too many requests"))))
+
 (defgeneric redirect-see-other-response (ty response location &key)
   (:documentation "Constructs an HTTP 303 See Other redirect response based on the specified content type.
 

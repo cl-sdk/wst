@@ -32,6 +32,7 @@
    #:forbidden-response
    #:unauthorized-response
    #:bad-request-response
+   #:too-many-requests-response
    #:redirect-see-other-response
    #:make-request
    #:make-response

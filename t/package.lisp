@@ -311,6 +311,16 @@
                   (wst.routing:dispatch-route-by-name
                    'a (wst.routing:make-request :uri "/" :method :GET))))))
 
+(def-route-testing respond-with-too-many-requests ()
+  (wst.routing:any-route-handler :GET
+                                 (lambda (request response)
+                                   (declare (ignorable request))
+                                   (wst.routing:too-many-requests-response t response)
+                                   response))
+  (5am:is (= 429 (wst.routing:response-status
+                  (wst.routing:dispatch-route-by-name
+                   'a (wst.routing:make-request :uri "/" :method :GET))))))
+
 (def-route-testing respond-with-unprocessable-entity ()
   (wst.routing:any-route-handler :GET
                                  (lambda (request response)
@@ -481,6 +491,21 @@
                                   (wst.routing:find-route-by-name 'route-a)))))
     (5am:is-true (equal :ok (car (wst.routing::route-custom
                                   (wst.routing:find-route-by-name 'route-b)))))))
+
+(def-route-testing rate-limit-throttles-after-limit-is-reached ()
+  (let ((handler (lambda (req res)
+                   (declare (ignore req))
+                   (wst.routing:ok-response t res :content "ok")
+                   res)))
+    (wst.routing.dsl:build-webserver
+     `(wst.routing.dsl:wrap
+       :before ,(wst.routing.dsl:rate-limit :max-requests 1 :window-seconds 60)
+       :route (wst.routing.dsl:route :GET throttled "/" ,handler)))
+    (let ((first (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET)))
+          (second (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET))))
+      (5am:is (= 200 (wst.routing:response-status first)))
+      (5am:is (= 429 (wst.routing:response-status second)))
+      (5am:is-true (getf (wst.routing:response-headers second) :retry-after)))))
 
 ;;;
 ;;; wst.routing.woo suite
