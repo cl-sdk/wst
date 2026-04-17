@@ -13,8 +13,8 @@
                #:wst.routing.dsl
                #:wst.routing.woo
                #:wst.routing.response.dsl
-               #:wst.throttle.store
-               #:wst.throttle)
+               #:wst.rate-limit.store
+               #:wst.rate-limit)
   :pathname "t"
   :serial t
   :components ((:file "package")))

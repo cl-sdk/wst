@@ -1,13 +1,13 @@
-(defpackage #:wst.throttle
+(defpackage #:wst.rate-limit
   (:use #:cl)
-  (:documentation "Fixed-window rate limiting and throttling.
+  (:documentation "Fixed-window rate limiting.
 
 This package is independent of HTTP request and response objects.
 It provides a pure rate-limiting primitive that tracks counts per
 arbitrary key and can be composed with any middleware layer.
 
 The tracking state is held by a pluggable storage backend that
-implements the wst.throttle.store protocol (fetch-window / save-window
+implements the wst.rate-limit.store protocol (fetch-window / save-window
 / delete-window). A built-in MEMORY-STORE backed by a hash table is
 provided and used by default.
 
@@ -31,7 +31,7 @@ Provides:
 
     - :MAX-REQUESTS   – Maximum calls allowed within the window (default: 60).
     - :WINDOW-SECONDS – Length of the time window in seconds (default: 60).
-    - :STORE          – A storage backend implementing wst.throttle.store.
+    - :STORE          – A storage backend implementing wst.rate-limit.store.
                         Defaults to a fresh MEMORY-STORE.
 
     Returns a closure of one argument KEY. Calling the closure produces
@@ -49,14 +49,14 @@ Provides:
     for that key, preventing unbounded memory growth.
 
     Example:
-      (let ((limiter (wst.throttle:rate-limit :max-requests 100
-                                              :window-seconds 60)))
+      (let ((limiter (wst.rate-limit:rate-limit :max-requests 100
+                                                :window-seconds 60)))
         (multiple-value-bind (allowed-p retry-after remaining)
             (funcall limiter \"192.0.2.1\")
           (if allowed-p
               (format t \"~a requests left in window.\" remaining)
               (format t \"Rate limited. Retry after ~a seconds.\" retry-after))))")
-  (:import-from #:wst.throttle.store
+  (:import-from #:wst.rate-limit.store
                 #:fetch-window
                 #:save-window
                 #:delete-window)
@@ -64,7 +64,7 @@ Provides:
    #:memory-store
    #:rate-limit))
 
-(in-package #:wst.throttle)
+(in-package #:wst.rate-limit)
 
 ;;;
 ;;; Built-in in-memory storage backend
@@ -73,21 +73,21 @@ Provides:
 (defclass memory-store ()
   ((table :initform (make-hash-table :test #'equal)
           :reader memory-store-table))
-  (:documentation "A simple in-memory throttle store backed by a hash table.
+  (:documentation "A simple in-memory rate-limit store backed by a hash table.
 Suitable for single-process use; not thread-safe."))
 
-(defmethod wst.throttle.store:fetch-window ((store memory-store) key)
+(defmethod wst.rate-limit.store:fetch-window ((store memory-store) key)
   "Returns (values count start-time) if an entry for KEY exists, (values nil nil) otherwise."
   (let ((entry (gethash key (memory-store-table store))))
     (if entry
         (values (car entry) (cdr entry))
         (values nil nil))))
 
-(defmethod wst.throttle.store:save-window ((store memory-store) key count start-time)
+(defmethod wst.rate-limit.store:save-window ((store memory-store) key count start-time)
   "Stores COUNT and START-TIME for KEY in the hash table."
   (setf (gethash key (memory-store-table store)) (cons count start-time)))
 
-(defmethod wst.throttle.store:delete-window ((store memory-store) key)
+(defmethod wst.rate-limit.store:delete-window ((store memory-store) key)
   "Removes the entry for KEY from the hash table."
   (remhash key (memory-store-table store)))
 
@@ -106,7 +106,7 @@ The returned closure accepts a single KEY argument and returns three values:
 - RETRY-AFTER-SECONDS: Seconds until the current window resets.
 - REMAINING:           Calls remaining in the window (0 when throttled).
 
-STORE must implement the wst.throttle.store protocol. When NIL (the default),
+STORE must implement the wst.rate-limit.store protocol. When NIL (the default),
 a fresh MEMORY-STORE is used."
   (let ((store (or store (make-instance 'memory-store))))
     (lambda (key)
@@ -128,4 +128,5 @@ a fresh MEMORY-STORE is used."
               (progn
                 (save-window store key (1+ count) start)
                 (values t retry-after-seconds remaining)))))))))
+
 

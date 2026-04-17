@@ -1,5 +1,5 @@
-(asdf:defsystem #:wst.throttle.store
-  :description "Storage backend protocol for wst.throttle rate-limit tracking (fetch/save/delete window)."
+(asdf:defsystem #:wst.rate-limit.store
+  :description "Storage backend protocol for wst.rate-limit tracking (fetch/save/delete window)."
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.0.1"

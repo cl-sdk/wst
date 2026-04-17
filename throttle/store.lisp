@@ -1,6 +1,6 @@
-(defpackage #:wst.throttle.store
+(defpackage #:wst.rate-limit.store
   (:use #:cl)
-  (:documentation "Storage backend protocol for wst.throttle rate-limit tracking.
+  (:documentation "Storage backend protocol for wst.rate-limit tracking.
 
 Implementations specialise on the first argument (STORE) to provide pluggable
 persistence for fixed-window counters.
@@ -14,7 +14,7 @@ The three operations a backend must implement are:
       (fetch-window store key)
 
     - STORE – The backend object.
-    - KEY   – An arbitrary value identifying the throttle bucket (must be
+    - KEY   – An arbitrary value identifying the rate-limit bucket (must be
               comparable with EQUAL or the backend's own equality test).
 
     Returns two values:
@@ -31,7 +31,7 @@ The three operations a backend must implement are:
       (save-window store key count start-time)
 
     - STORE      – The backend object.
-    - KEY        – The throttle bucket identifier.
+    - KEY        – The rate-limit bucket identifier.
     - COUNT      – The updated call count to store.
     - START-TIME – The universal-time timestamp when the window began.
 
@@ -45,7 +45,7 @@ The three operations a backend must implement are:
       (delete-window store key)
 
     - STORE – The backend object.
-    - KEY   – The throttle bucket identifier whose entry should be removed.
+    - KEY   – The rate-limit bucket identifier whose entry should be removed.
 
     The return value is implementation-defined and should not be relied upon.")
   (:export
@@ -53,7 +53,7 @@ The three operations a backend must implement are:
    #:save-window
    #:delete-window))
 
-(in-package #:wst.throttle.store)
+(in-package #:wst.rate-limit.store)
 
 (defgeneric fetch-window (store key)
   (:documentation "Retrieves the current window state for KEY from STORE.
@@ -61,13 +61,13 @@ The three operations a backend must implement are:
 Returns two values: COUNT and START-TIME, or (NIL NIL) if no entry exists.
 
 - STORE – The storage backend.
-- KEY   – The throttle bucket identifier."))
+- KEY   – The rate-limit bucket identifier."))
 
 (defgeneric save-window (store key count start-time)
   (:documentation "Persists the window state for KEY in STORE.
 
 - STORE      – The storage backend.
-- KEY        – The throttle bucket identifier.
+- KEY        – The rate-limit bucket identifier.
 - COUNT      – Number of calls recorded in the current window.
 - START-TIME – Universal-time timestamp when the current window began."))
 
@@ -75,4 +75,4 @@ Returns two values: COUNT and START-TIME, or (NIL NIL) if no entry exists.
   (:documentation "Removes the window entry for KEY from STORE.
 
 - STORE – The storage backend.
-- KEY   – The throttle bucket identifier to evict."))
+- KEY   – The rate-limit bucket identifier to evict."))
