@@ -58,7 +58,7 @@ Slots:
        (handler-case
            (let ((stream (if (subtypep (stream-element-type content) 'character)
                              content
-                             (make-flexi-stream content :external-format :utf-8))))
+                             (flexi-streams:make-flexi-stream content :external-format :utf-8))))
              (with-output-to-string (out)
                (loop :for char = (read-char stream nil nil)
                      :while char
@@ -79,7 +79,7 @@ Slots:
                               (write-char #\Space out)
                               (incf index))
                              ((and (char= char #\%)
-                                   (<= (+ index 2) (1- size)))
+                                   (< (+ index 2) size))
                               (let* ((h1 (digit-char-p (char value (1+ index)) 16))
                                      (h2 (digit-char-p (char value (+ index 2)) 16)))
                                 (if (and h1 h2)
