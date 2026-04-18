@@ -42,13 +42,15 @@
   (wst.routing:ok-response t response :content "ok"))
 
 (defun app-condition-handler (request response err)
-  (wst.routing:internal-server-error-response
-   t response
-   :content (format nil "condition handled~%method: ~a~%uri: ~a~%type: ~a~%message: ~a"
-                    (wst.routing:request-method request)
-                    (wst.routing:request-uri request)
-                    (type-of err)
-                    err)))
+  (let ((message (format nil "condition handled~%method: ~a~%uri: ~a~%type: ~a~%message: ~a"
+                         (wst.routing:request-method request)
+                         (wst.routing:request-uri request)
+                         (type-of err)
+                         err)))
+    (format *error-output* "~&~a~%" message)
+    (wst.routing:internal-server-error-response
+     t response
+     :content message)))
 
 (defun users-handler (request response)
   (declare (ignore request))
