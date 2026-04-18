@@ -41,6 +41,12 @@
   (declare (ignore request))
   (wst.routing:ok-response t response :content "ok"))
 
+(defun app-condition-handler (request response err)
+  (declare (ignore request))
+  (wst.routing:internal-server-error-response
+   t response
+   :content (format nil "condition handled: ~a" err)))
+
 (defun users-handler (request response)
   (declare (ignore request))
   (wst.routing.response.dsl:status 200 response)
@@ -74,23 +80,29 @@
                (fail (cdr (assoc "fail" parsed-query :test #'string=))))
           (if (and fail (string-equal fail "true"))
               (wst.routing:internal-server-error-response t response :content "forced failure")
-              (wst.routing:ok-response t response :content "stable response"))))))
+               (wst.routing:ok-response t response :content "stable response"))))))
+
+(defun boom-handler (request response)
+  (declare (ignore request response))
+  (error "boom from example route"))
 
 (defun not-found-handler (request response)
   (declare (ignore request))
   (wst.routing:not-found-response t response :content "fallback route"))
 
 (defun build-app-routes ()
+  (wst.routing:condition-handler #'app-condition-handler)
   (let ((cb-before (getf *circuit-breaker* :before))
         (cb-after (getf *circuit-breaker* :after)))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:group
-       (wst.routing.dsl:route :GET index "/" index-handler)
-       (wst.routing.dsl:route :GET health "/health" health-handler)
-       (wst.routing.dsl:resource "/api/v1"
-                                (wst.routing.dsl:route :GET users "/users" users-handler)
-                                (wst.routing.dsl:route :POST echo "/echo" echo-handler)
-                                (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
+        (wst.routing.dsl:route :GET index "/" index-handler)
+        (wst.routing.dsl:route :GET health "/health" health-handler)
+        (wst.routing.dsl:route :GET boom "/boom" boom-handler)
+        (wst.routing.dsl:resource "/api/v1"
+                                 (wst.routing.dsl:route :GET users "/users" users-handler)
+                                 (wst.routing.dsl:route :POST echo "/echo" echo-handler)
+                                 (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
        (wst.routing.dsl:wrap
         :before (list ,cb-before rate-limit-before)
         :after (list ,cb-after)

@@ -39,6 +39,11 @@ GET :base/api/v1/flaky
 X-Forwarded-For: 198.51.100.10
 
 #
+# Condition-handler demo:
+# This route raises a condition and is rendered by the app condition handler.
+GET :base/boom
+
+#
 # Circuit-breaker demo:
 # Run the first two requests with fail=true to trigger failures, then
 # run the third request to observe the open-circuit response.
