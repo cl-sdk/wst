@@ -153,13 +153,13 @@
                   :|application/x-www-form-urlencoded|
                   "name=alice+smith&email=alice%40test.dev"))))
 
-(5am:def-test parse-content-returns-raw-content ()
+(5am:def-test parse-content-text-plain-returns-content-as-string ()
   (5am:is (string= "hello"
-                   (wst.request-content:parse-content :raw "hello"))))
+                   (wst.request-content:parse-content :|text/plain| "hello"))))
 
-(5am:def-test parse-content-signals-on-unknown-parser ()
-  (5am:signals error
-    (wst.request-content:parse-content :unknown "hello")))
+(5am:def-test parse-content-default-returns-content-as-string ()
+  (5am:is (string= "hello"
+                   (wst.request-content:parse-content :unknown-type "hello"))))
 
 (5am:def-test content-as-string-reads-from-character-stream ()
   (5am:is (string= "hello stream"
