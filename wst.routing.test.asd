@@ -23,5 +23,10 @@
   :pathname "t"
   :serial t
   :components ((:file "package")
+               (:file "routing-tests")
+               (:file "routing-dsl-tests")
+               (:file "circuit-breaker-tests")
+               (:file "rate-limit-tests")
+               (:file "routing-woo-tests")
                (:file "response-dsl-tests")
                (:file "request-content-tests")))
