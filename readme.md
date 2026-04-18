@@ -81,6 +81,48 @@ This will build a list of routes in the following form.
                           release-request-connection)>
 ```
 
+#### wst.circuit-breaker.routing
+
+HTTP adapter that bridges `wst.circuit-breaker` with `wst.routing.dsl` middleware.
+Create a circuit breaker middleware pair and apply it with `wrap`:
+
+```lisp
+(defparameter cb
+  (wst.circuit-breaker.routing:circuit-breaker
+   :failure-threshold 3
+   :recovery-timeout 30))
+
+(wst.routing.dsl:build-webserver
+ `(wst.routing.dsl:wrap
+   :before ,(getf cb :before)
+   :after ,(getf cb :after)
+   :route (wst.routing.dsl:route :GET health "/health"
+                                 (lambda (request response)
+                                   (declare (ignore request))
+                                   (wst.routing:ok-response t response :content "ok")))))
+```
+
+#### wst.circuit-breaker
+
+A pure circuit breaker state machine with no HTTP dependencies.
+All state is held in the circuit breaker struct and passed explicitly to each function.
+
+```lisp
+;; Create and drive the state machine directly (no HTTP required).
+(defparameter cb
+  (wst.circuit-breaker:make-circuit-breaker
+   :failure-threshold 3
+   :recovery-timeout 30))
+
+;; Before a call: check if it should proceed.
+(wst.circuit-breaker:circuit-breaker-check cb)
+;; => :allowed  (circuit is closed or half-open)
+;; => :blocked  (circuit is open)
+
+;; After a call: record its outcome (T = failed, NIL = succeeded).
+(wst.circuit-breaker:circuit-breaker-record cb nil)
+```
+
 # license
 
 Unlicense.
