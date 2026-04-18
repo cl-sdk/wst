@@ -1,15 +1,3 @@
-;;; Run with:
-;;;   sbcl --load examples/woo-application.lisp
-;;;
-;;; Then test:
-;;;   curl -i http://localhost:3000/
-;;;   curl -i http://localhost:3000/health
-;;;   curl -i http://localhost:3000/api/v1/users
-;;;   curl -i -X POST http://localhost:3000/api/v1/echo \
-;;;        -H "Content-Type: application/x-www-form-urlencoded; charset=utf-8" \
-;;;        -d "name=wst&lang=lisp"
-;;;   curl -i http://localhost:3000/api/v1/cookies -H "Cookie: first=one; second=two"
-;;;   curl -i http://localhost:3000/api/v1/flaky?fail=true
 
 (ql:quickload '(:wst.routing
                 :wst.routing.dsl
