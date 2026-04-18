@@ -64,8 +64,8 @@ Examples:
 
   (parse-content-type \"text/plain, application/x-www-form-urlencoded; q=0.9\")
   => ((:|text/plain|) (:|application/x-www-form-urlencoded| (\"q\" . \"0.9\")))"
-  (when (and content-type
-             (not (string= (string-trim '(#\Space #\Tab) content-type) "")))
+  (check-type content-type string)
+  (when (not (string= (string-trim '(#\Space #\Tab) content-type) ""))
     (loop :for entry :in (str:split "," content-type)
           :for trimmed = (string-trim '(#\Space #\Tab) entry)
           :unless (string= trimmed "")

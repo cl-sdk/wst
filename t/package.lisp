@@ -128,9 +128,12 @@
     (5am:is (equal '(("q" . "0.9")) (cdr (second result))))))
 
 (5am:def-test parse-content-type-returns-nil-for-empty-header ()
-  (5am:is (null (wst.request-content:parse-content-type nil)))
   (5am:is (null (wst.request-content:parse-content-type "")))
   (5am:is (null (wst.request-content:parse-content-type "   "))))
+
+(5am:def-test parse-content-type-signals-error-for-non-string ()
+  (5am:signals type-error (wst.request-content:parse-content-type nil))
+  (5am:signals type-error (wst.request-content:parse-content-type 42)))
 
 (5am:def-test parse-content-type-unquotes-quoted-string-parameter ()
   ;; RFC 7230 §3.2.6: parameter values may be quoted-strings
