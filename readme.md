@@ -106,6 +106,27 @@ Create a circuit breaker middleware pair and apply it with `wrap`:
                                    (wst.routing:ok-response t response :content "ok")))))
 ```
 
+#### wst.routing.woo
+
+Adapter helpers for running your `wst.routing` routes on top of the [Woo](https://github.com/fukamachi/woo) web server.
+
+```lisp
+(ql:quickload '(:wst.routing :wst.routing.dsl :wst.routing.woo :woo))
+
+(wst.routing.dsl:build-webserver
+ `(wst.routing.dsl:route :GET hello "/" 
+                         (lambda (request response)
+                           (declare (ignore request))
+                           (wst.routing:ok-response t response :content "hello from woo"))))
+
+(defun app (env)
+  (let* ((request (wst.routing.woo:request-from-woo-env env))
+         (response (wst.routing:dispatch-route request)))
+    (wst.routing.woo:response-to-woo-response response)))
+
+(woo:run #'app :port 3000)
+```
+
 #### wst.circuit-breaker
 
 A pure circuit breaker state machine with no HTTP dependencies.
