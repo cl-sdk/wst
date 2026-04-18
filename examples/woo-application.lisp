@@ -61,47 +61,54 @@
 
 (defun echo-handler (request response)
   (let* ((content-type (or (wst.routing:request-content-type request) "text/plain"))
-         (parsed-type (car (wst.request-content:parse-content-type content-type)))
-         (mime (or (car parsed-type) :|text/plain|))
-         (options (cdr parsed-type))
-         (charset (cdr (assoc "charset" options :test #'string=)))
-         (encoding (or (and charset
-                            (ignore-errors (intern (string-upcase charset) :keyword)))
-                       :us-ascii))
-         (body (wst.request-content:parse-content
-                mime
-                (wst.routing:request-content request)
-                encoding)))
-    (wst.routing:ok-response t response :content (format nil "~a" body))))
+         (parsed-type (or (car (wst.request-content:parse-content-type content-type))
+                          (cons :|text/plain| nil))))
+    (destructuring-bind (mime . options) parsed-type
+      (let* ((charset (cdr (assoc "charset" options :test #'string=)))
+             (encoding (if (string-equal charset "utf-8")
+                           :utf-8
+                           :us-ascii))
+             (body (wst.request-content:parse-content
+                    mime
+                    (wst.routing:request-content request)
+                    encoding)))
+        (wst.routing:ok-response t response :content (format nil "~a" body))))))
 
 (defun cookies-handler (request response)
-  (let* ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request))))
+  (let ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request))))
     (wst.routing:ok-response t response
                              :content (format nil "cookies=~a" (length cookies)))))
 
 (defun flaky-handler (request response)
-  (if (search "fail=true" (wst.routing:request-query request) :test #'char-equal)
-      (wst.routing:internal-server-error-response t response :content "forced failure")
-      (wst.routing:ok-response t response :content "stable response")))
+  (let ((query (or (wst.routing:request-query request) "")))
+    (if (zerop (length query))
+        (wst.routing:ok-response t response :content "stable response")
+        (let* ((parsed-query (wst.request-content:parse-content :|application/x-www-form-urlencoded| query))
+               (fail (cdr (assoc "fail" parsed-query :test #'string=))))
+          (if (and fail (string-equal fail "true"))
+              (wst.routing:internal-server-error-response t response :content "forced failure")
+              (wst.routing:ok-response t response :content "stable response"))))))
 
 (defun not-found-handler (request response)
   (declare (ignore request))
   (wst.routing:not-found-response t response :content "fallback route"))
 
 (defun build-app-routes ()
-  (wst.routing.dsl:build-webserver
-   `(wst.routing.dsl:group
-     (wst.routing.dsl:route :GET index "/" index-handler)
-     (wst.routing.dsl:route :GET health "/health" health-handler)
-     (wst.routing.dsl:resource "/api/v1"
-                              (wst.routing.dsl:route :GET users "/users" users-handler)
-                              (wst.routing.dsl:route :POST echo "/echo" echo-handler)
-                              (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
-     (wst.routing.dsl:wrap
-      :before (list ,(getf *circuit-breaker* :before) rate-limit-before)
-      :after (list ,(getf *circuit-breaker* :after))
-      :route (wst.routing.dsl:route :GET flaky "/api/v1/flaky" flaky-handler))
-     (wst.routing.dsl:any-route :GET not-found-handler))))
+  (let ((cb-before (getf *circuit-breaker* :before))
+        (cb-after (getf *circuit-breaker* :after)))
+    (wst.routing.dsl:build-webserver
+     `(wst.routing.dsl:group
+       (wst.routing.dsl:route :GET index "/" index-handler)
+       (wst.routing.dsl:route :GET health "/health" health-handler)
+       (wst.routing.dsl:resource "/api/v1"
+                                (wst.routing.dsl:route :GET users "/users" users-handler)
+                                (wst.routing.dsl:route :POST echo "/echo" echo-handler)
+                                (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
+       (wst.routing.dsl:wrap
+        :before (list ,cb-before rate-limit-before)
+        :after (list ,cb-after)
+        :route (wst.routing.dsl:route :GET flaky "/api/v1/flaky" flaky-handler))
+       (wst.routing.dsl:any-route :GET not-found-handler)))))
 
 (defun app (env)
   (let* ((request (wst.routing.woo:request-from-woo-env env))
