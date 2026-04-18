@@ -47,7 +47,7 @@ Quoted-string parameter values are unquoted per RFC 7230 §3.2.6."
                          (cons (string-downcase trimmed) "")))))
 
 (defun parse-content-type (content-type)
-  "Parse an HTTP Content-Type (or Accept) header value.
+  "Parse an HTTP Content-Type header value.
 
 Returns a list of (MIME-TYPE-KEYWORD . OPTIONS-ALIST) pairs, one per
 comma-separated entry.  MIME-TYPE-KEYWORD is the lowercased MIME type
