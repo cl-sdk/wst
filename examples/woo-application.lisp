@@ -109,8 +109,8 @@
                                  (wst.routing.dsl:route :POST echo "/echo" echo-handler)
                                  (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
        (wst.routing.dsl:wrap
-        :before (list ,cb-before rate-limit-before)
-        :after (list ,cb-after)
+        :before (,cb-before rate-limit-before)
+        :after (,cb-after)
         :route (wst.routing.dsl:route :GET flaky "/api/v1/flaky" flaky-handler))
        (wst.routing.dsl:any-route :GET not-found-handler)))))
 
