@@ -2,6 +2,7 @@
 # Start the app first:
 #   sbcl --load examples/woo-application.lisp
 
+# restclient variable syntax
 :base = http://localhost:3000
 
 # Index
@@ -18,7 +19,7 @@ GET :base/api/v1/users
 #
 # Echo (form-urlencoded)
 POST :base/api/v1/echo
-Content-Type: application/x-www-form-urlencoded; charset=utf-8
+Content-Type: application/x-www-form-urlencoded
 
 name=wst&lang=lisp
 
@@ -28,25 +29,19 @@ GET :base/api/v1/cookies
 Cookie: first=one; second=two
 
 #
-# Flaky endpoint (normal)
-GET :base/api/v1/flaky
-
-#
-# Flaky endpoint (forced failure)
-GET :base/api/v1/flaky?fail=true
-
-#
 # Fallback any-route
 GET :base/does-not-exist
 
 #
-# Rate-limit demo (same key, run several times quickly to get 429)
+# Rate-limit demo (X-Forwarded-For is used as the limiter key)
+# Run this request several times quickly to get 429.
 GET :base/api/v1/flaky
 X-Forwarded-For: 198.51.100.10
 
 #
 # Circuit-breaker demo:
-# run fail=true twice, then run without fail to observe open circuit response
+# Run the first two requests with fail=true to trigger failures, then
+# run the third request to observe the open-circuit response.
 GET :base/api/v1/flaky?fail=true
 
 #
