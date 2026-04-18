@@ -81,8 +81,9 @@ Examples:
 (defun content-as-string (content &optional (encoding :us-ascii))
   "Normalize CONTENT to a string.
 
-Accepts a string, character or binary stream, or any printable value.
-Returns an empty string for nil.
+Accepts nil (returns \"\"), a string (returned as-is), a binary or character
+stream (read and decoded), or any other value (returned as-is, assumed to be
+a string).
 
 ENCODING is the external-format keyword used when decoding a binary stream
 \(e.g. :us-ascii, :utf-8).  Defaults to :us-ascii."
@@ -97,7 +98,7 @@ ENCODING is the external-format keyword used when decoding a binary stream
          (loop :for char = (read-char stream nil nil)
                :while char
                :do (write-char char out)))))
-    (t (format nil "~a" content))))
+    (t content)))
 
 (defun %parse-form-urlencoded (content)
   "Parse CONTENT in application/x-www-form-urlencoded format."
