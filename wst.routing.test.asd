@@ -22,4 +22,6 @@
                #:wst.rate-limit)
   :pathname "t"
   :serial t
-  :components ((:file "package")))
+  :components ((:file "package")
+               (:file "response-dsl-tests")
+               (:file "request-content-tests")))
