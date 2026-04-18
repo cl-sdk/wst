@@ -88,8 +88,6 @@ a string).
 ENCODING is the external-format keyword used when decoding a binary stream
 \(e.g. :us-ascii, :utf-8).  Defaults to :us-ascii."
   (cond
-    ((null content) "")
-    ((stringp content) content)
     ((streamp content)
      (let ((stream (if (subtypep (stream-element-type content) 'character)
                        content
