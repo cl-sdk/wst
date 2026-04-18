@@ -111,21 +111,28 @@ Create a circuit breaker middleware pair and apply it with `wrap`:
 Adapter helpers for running your `wst.routing` routes on top of the [Woo](https://github.com/fukamachi/woo) web server.
 
 ```lisp
-(ql:quickload '(:wst.routing :wst.routing.dsl :wst.routing.woo :woo))
-
-(wst.routing.dsl:build-webserver
- `(wst.routing.dsl:route :GET hello "/" 
-                         (lambda (request response)
-                           (declare (ignore request))
-                           (wst.routing:ok-response t response :content "hello from woo"))))
-
-(defun app (env)
-  (let* ((request (wst.routing.woo:request-from-woo-env env))
-         (response (wst.routing:dispatch-route request)))
-    (wst.routing.woo:response-to-woo-response response)))
-
-(woo:run #'app :port 3000)
+;; Runnable sample application:
+;;   sbcl --load examples/woo-application.lisp
 ```
+
+The example application in `examples/woo-application.lisp` includes:
+
+- DSL routes (`route`, `resource`, `wrap`, `any-route`)
+- Woo adapter bridge (`request-from-woo-env`, `response-to-woo-response`)
+- Rate-limit middleware (`wst.rate-limit`)
+- Circuit-breaker middleware (`wst.circuit-breaker.routing`)
+- Form/body parsing (`wst.request-content`)
+- Cookie parsing (`wst.cookies`)
+
+It exposes these endpoints for manual testing:
+
+- `GET /`
+- `GET /health`
+- `GET /api/v1/users`
+- `POST /api/v1/echo`
+- `GET /api/v1/cookies`
+- `GET /api/v1/flaky?fail=true`
+- fallback `any-route` for unmatched GET paths
 
 #### wst.circuit-breaker
 
