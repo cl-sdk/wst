@@ -1,0 +1,51 @@
+# Restclient requests for examples/woo-application.lisp
+# Start the app first:
+#   sbcl --load examples/woo-application.lisp
+
+# restclient variable syntax
+:base = http://localhost:3000
+
+# Index
+GET :base/
+
+#
+# Health
+GET :base/health
+
+#
+# Users (JSON)
+GET :base/api/v1/users
+
+#
+# Echo (form-urlencoded)
+POST :base/api/v1/echo
+Content-Type: application/x-www-form-urlencoded
+
+name=wst&lang=lisp
+
+#
+# Cookies parsing
+GET :base/api/v1/cookies
+Cookie: first=one; second=two
+
+#
+# Fallback any-route
+GET :base/does-not-exist
+
+#
+# Rate-limit demo (X-Forwarded-For is used as the limiter key)
+# Run this request several times quickly to get 429.
+GET :base/api/v1/flaky
+X-Forwarded-For: 198.51.100.10
+
+#
+# Circuit-breaker demo:
+# Run the first two requests with fail=true to trigger failures, then
+# run the third request to observe the open-circuit response.
+GET :base/api/v1/flaky?fail=true
+
+#
+GET :base/api/v1/flaky?fail=true
+
+#
+GET :base/api/v1/flaky
