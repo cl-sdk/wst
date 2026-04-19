@@ -2,6 +2,7 @@
                 :wst.routing.dsl
                 :wst.routing.response.dsl
                 :wst.routing.woo
+                :wst.session.csrf
                 :wst.request-content
                 :wst.request-content.routing
                 :wst.cookies
@@ -24,6 +25,87 @@
 
 (defparameter *parse-content-middleware*
   (wst.request-content.routing:parse-request-content))
+
+(defclass example-session-csrf-store ()
+  ((tokens
+    :initform (make-hash-table :test 'equal)
+    :accessor store-tokens)))
+
+(defparameter *csrf-store* (make-instance 'example-session-csrf-store))
+
+(defun generate-random-token ()
+  (labels ((bytes->hex (bytes)
+             (with-output-to-string (out)
+               (loop for b across bytes
+                     do (format out "~2,'0X" b)))))
+    (with-open-file (stream "/dev/urandom"
+                            :direction :input
+                            :element-type '(unsigned-byte 8))
+      (let ((bytes (make-array 32 :element-type '(unsigned-byte 8))))
+        (unless (= (read-sequence bytes stream) (length bytes))
+          (error "failed to read enough random bytes for csrf token"))
+        (bytes->hex bytes)))))
+
+(defun generate-csrf-token ()
+  (generate-random-token))
+
+(defun generate-session-id ()
+  (generate-random-token))
+
+(defun secure-string= (a b)
+  (if (and (stringp a) (stringp b))
+      (let* ((len-a (length a))
+             (len-b (length b))
+             (max-len (max len-a len-b))
+             (acc (logxor len-a len-b)))
+        (dotimes (i max-len (zerop acc))
+          (let ((char-a (if (< i len-a) (char-code (aref a i)) 0))
+                (char-b (if (< i len-b) (char-code (aref b i)) 0)))
+            (setf acc (logior acc (logxor char-a char-b))))))
+      nil))
+
+(defmethod wst.session.csrf:session-csrf-token ((obj example-session-csrf-store) &key session-id &allow-other-keys)
+  (gethash session-id (store-tokens obj)))
+
+(defmethod wst.session.csrf:add-session-csrf-token ((obj example-session-csrf-store) key &key session-id &allow-other-keys)
+  (setf (gethash session-id (store-tokens obj)) key))
+
+(defmethod wst.session.csrf:remove-session-csrf-token ((obj example-session-csrf-store) &key session-id &allow-other-keys)
+  (remhash session-id (store-tokens obj)))
+
+(defmethod wst.session.csrf:verify-session-csrf-token ((obj example-session-csrf-store) key &key session-id &allow-other-keys)
+  (let ((stored (wst.session.csrf:session-csrf-token obj :session-id session-id)))
+    (and stored key (secure-string= stored key))))
+
+(defun request-session-id (request)
+  (let* ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request)))
+         (session-id (cdr (assoc "wst-example-session-id" cookies :test #'string=))))
+    session-id))
+
+(defun csrf-token-handler (request response)
+  (let* ((session-id (or (request-session-id request) (generate-session-id)))
+         (token (generate-csrf-token)))
+    (wst.session.csrf:add-session-csrf-token *csrf-store* token :session-id session-id)
+    (wst.routing:ok-response t response
+                             :headers (list :set-cookie (format nil "wst-example-session-id=~a; Path=/; SameSite=Strict" session-id)
+                                            :x-csrf-token token)
+                             :content token)))
+
+(defun csrf-before (request response)
+  (let ((method (wst.routing:request-method request)))
+    (if (member method '(:POST :PUT :PATCH :DELETE))
+        (let* ((headers (wst.routing:request-headers request))
+               (session-id (request-session-id request))
+               (header-token (gethash "x-csrf-token" headers))
+               (stored-token (wst.session.csrf:session-csrf-token *csrf-store* :session-id session-id)))
+           (cond
+             ((or (null header-token) (null stored-token))
+              (cons :halt (wst.routing:forbidden-response t response :content "Missing CSRF token")))
+             ((wst.session.csrf:verify-session-csrf-token *csrf-store* header-token :session-id session-id)
+              (cons :continue response))
+             (t
+              (cons :halt (wst.routing:forbidden-response t response :content "Invalid CSRF token")))))
+        (cons :continue response))))
 
 (defun rate-limit-before (request response)
   (multiple-value-bind (allowed-p retry-after)
@@ -70,6 +152,10 @@
   (let ((body (wst.routing:request-content request)))
     (wst.routing:ok-response t response :content (format nil "~a" body))))
 
+(defun csrf-check-handler (request response)
+  (declare (ignore request))
+  (wst.routing:ok-response t response :content "csrf token valid"))
+
 (defun cookies-handler (request response)
   (let ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request))))
     (wst.routing:ok-response t response
@@ -103,13 +189,17 @@
         (wst.routing.dsl:route :GET health "/health" health-handler)
         (wst.routing.dsl:route :GET boom "/boom" boom-handler)
         (wst.routing.dsl:resource "/api/v1"
-                                 (wst.routing.dsl:route :GET users "/users" users-handler)
-                                 (wst.routing.dsl:wrap
-                                  :before ,*parse-content-middleware*
-                                  :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
-                                 (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
-       (wst.routing.dsl:wrap
-        :before (,cb-before rate-limit-before)
+                                  (wst.routing.dsl:route :GET users "/users" users-handler)
+                                  (wst.routing.dsl:route :GET csrf "/csrf" csrf-token-handler)
+                                  (wst.routing.dsl:wrap
+                                   :before (,csrf-before)
+                                   :route (wst.routing.dsl:route :POST csrf-check "/csrf/check" csrf-check-handler))
+                                  (wst.routing.dsl:wrap
+                                   :before (,*parse-content-middleware*)
+                                   :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
+                                  (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
+        (wst.routing.dsl:wrap
+         :before (,cb-before rate-limit-before)
         :after (,cb-after)
         :route (wst.routing.dsl:route :GET flaky "/api/v1/flaky" flaky-handler))
        (wst.routing.dsl:any-route :GET not-found-handler)))))

@@ -17,6 +17,18 @@ GET :base/health
 GET :base/api/v1/users
 
 #
+# Issue CSRF token for subsequent unsafe requests.
+# Copy both Set-Cookie and X-CSRF-Token values into the POST requests below.
+GET :base/api/v1/csrf
+
+#
+# CSRF check (protected POST)
+# Copy both values from GET /api/v1/csrf.
+POST :base/api/v1/csrf/check
+X-CSRF-Token: replace-with-token-from-csrf-endpoint
+Cookie: wst-example-session-id=replace-with-session-id-from-set-cookie
+
+#
 # Echo (form-urlencoded)
 POST :base/api/v1/echo
 Content-Type: application/x-www-form-urlencoded
