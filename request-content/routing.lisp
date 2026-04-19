@@ -4,7 +4,7 @@
 
 Provides a WRAP :before middleware constructor that parses request content
 using `wst.request-content:parse-content` and stores the parsed value in
-`wst.routing:request-data`.")
+`wst.routing:request-content`.")
   (:export
    #:parse-request-content))
 
@@ -30,7 +30,6 @@ using `wst.request-content:parse-content` and stores the parsed value in
             fallback))))
 
 (defun parse-request-content (&key
-                                (request-data-key :content)
                                 (default-content-type "text/plain")
                                 (default-encoding :us-ascii))
   "Create a before-middleware that parses the request body.
@@ -40,7 +39,7 @@ Returns a function suitable for `wst.routing.dsl:wrap` :before.
 Behavior:
 - Reads request content type from `wst.routing:request-content-type`.
 - Parses the body with `wst.request-content:parse-content`.
-- Stores parsed content in `wst.routing:request-data` under REQUEST-DATA-KEY.
+- Stores parsed content in `wst.routing:request-content`.
 - Returns `(:continue . response)` on success.
 - Returns `(:halt . response)` with HTTP 400 on parse errors."
   (check-type default-content-type string)
@@ -55,7 +54,7 @@ Behavior:
                (content (wst.request-content:parse-content mime
                                                            (wst.routing:request-content request)
                                                            encoding)))
-          (setf (getf (wst.routing:request-data request) request-data-key) content)
+          (setf (wst.routing:request-content request) content)
           (cons :continue response))
       (error (err)
         (wst.routing:bad-request-response

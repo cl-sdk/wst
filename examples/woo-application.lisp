@@ -67,7 +67,7 @@
   (com.inuoe.jzon:parse (wst.request-content:content-as-string content encoding)))
 
 (defun echo-handler (request response)
-  (let ((body (getf (wst.routing:request-data request) :content)))
+  (let ((body (wst.routing:request-content request)))
     (wst.routing:ok-response t response :content (format nil "~a" body))))
 
 (defun cookies-handler (request response)

@@ -12,7 +12,7 @@
      `(wst.routing.dsl:wrap
        :before ,middleware
        :route (wst.routing.dsl:route :POST parse-content "/" (lambda (request response)
-                                                               (setf parsed-content (getf (wst.routing:request-data request) :content))
+                                                               (setf parsed-content (wst.routing:request-content request))
                                                                (wst.routing:ok-response t response :content "ok")
                                                                response))))
     (let ((response (wst.routing:dispatch-route
@@ -56,9 +56,9 @@
      `(wst.routing.dsl:wrap
        :before ,middleware
        :route (wst.routing.dsl:route :POST default-content-type "/" (lambda (request response)
-                                                                       (setf parsed-content (getf (wst.routing:request-data request) :content))
-                                                                       (wst.routing:ok-response t response :content "ok")
-                                                                       response))))
+                                                                      (setf parsed-content (wst.routing:request-content request))
+                                                                      (wst.routing:ok-response t response :content "ok")
+                                                                      response))))
     (let ((response (wst.routing:dispatch-route
                      (wst.routing:make-request
                       :uri "/"

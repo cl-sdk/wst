@@ -109,7 +109,7 @@ Create a circuit breaker middleware pair and apply it with `wrap`:
 #### wst.request-content.routing
 
 Middleware adapter that parses request bodies and stores the parsed value in
-`request-data` (default key `:content`).
+`request-content`.
 
 ```lisp
 (defparameter parse-content-middleware
@@ -119,9 +119,9 @@ Middleware adapter that parses request bodies and stores the parsed value in
  `(wst.routing.dsl:wrap
    :before ,parse-content-middleware
    :route (wst.routing.dsl:route :POST create-user "/users"
-                                 (lambda (request response)
-                                   (let ((body (getf (wst.routing:request-data request) :content)))
-                                     (wst.routing:ok-response t response :content (format nil "~a" body)))))))
+                                  (lambda (request response)
+                                    (let ((body (wst.routing:request-content request)))
+                                      (wst.routing:ok-response t response :content (format nil "~a" body)))))))
 ```
 
 #### wst.circuit-breaker
