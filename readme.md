@@ -18,7 +18,7 @@ Main system. Manages the routes used in a application.
 (condition-handler #'development-condition-handler)
 
 ;; anything else that is a GET request is handled like this.
-(any-route-handler :GET (lambda (request reponse) nil))
+(any-route-handler :GET (lambda (request response) nil))
 
 (route-uri-of (find-route-by-name 'post-something) (list 1))
 ;; => "/something/1"
