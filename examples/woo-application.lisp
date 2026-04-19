@@ -199,14 +199,27 @@
          (response (wst.routing:dispatch-route request)))
     (wst.routing.woo:response-to-woo-response response)))
 
+(defconstant +sigint+ 2)
+(defconstant +sigquit+ 3)
+(defconstant +sigterm+ 15)
+
+(defun woo-signal-symbol (name)
+  (or (find-symbol name :woo.signal)
+      (error "Woo internal symbol ~s not found in package WOO.SIGNAL" name)))
+
+(defun graceful-shutdown-signal-handlers ()
+  "Map SIGINT/SIGQUIT/SIGTERM to Woo's graceful shutdown callback."
+  (let ((graceful-callback-symbol (woo-signal-symbol "SIGQUIT-CB")))
+    (list (cons +sigint+ graceful-callback-symbol)
+          (cons +sigquit+ graceful-callback-symbol)
+          (cons +sigterm+ graceful-callback-symbol))))
+
 (defun start (&key (port 3000))
   (build-app-routes)
   (format t "~&Starting example app on http://localhost:~a~%" port)
   (format t "~&Press Ctrl+C to stop gracefully.~%")
-  (let ((woo.signal::*signals*
-          '((2 . woo.signal::sigquit-cb)
-            (3 . woo.signal::sigquit-cb)
-            (15 . woo.signal::sigquit-cb))))
-    (woo:run #'app :port port)))
+  (let ((signals-symbol (woo-signal-symbol "*SIGNALS*")))
+    (progv (list signals-symbol) (list (graceful-shutdown-signal-handlers))
+      (woo:run #'app :port port))))
 
 (start)
