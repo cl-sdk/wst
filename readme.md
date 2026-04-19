@@ -106,6 +106,24 @@ Create a circuit breaker middleware pair and apply it with `wrap`:
                                    (wst.routing:ok-response t response :content "ok")))))
 ```
 
+#### wst.request-content.routing
+
+Middleware adapter that parses request bodies and stores the parsed value in
+`request-data` (default key `:content`).
+
+```lisp
+(defparameter parse-content-middleware
+  (wst.request-content.routing:parse-request-content-middleware))
+
+(wst.routing.dsl:build-webserver
+ `(wst.routing.dsl:wrap
+   :before ,parse-content-middleware
+   :route (wst.routing.dsl:route :POST create-user "/users"
+                                 (lambda (request response)
+                                   (let ((body (getf (wst.routing:request-data request) :content)))
+                                     (wst.routing:ok-response t response :content (format nil "~a" body)))))))
+```
+
 #### wst.circuit-breaker
 
 A pure circuit breaker state machine with no HTTP dependencies.
