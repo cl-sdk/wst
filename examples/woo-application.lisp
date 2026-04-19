@@ -62,10 +62,10 @@
 (defun request-session-id (request)
   (let* ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request)))
          (session-id (cdr (assoc "wst-example-session-id" cookies :test #'string=))))
-    (or session-id (generate-csrf-token))))
+    session-id))
 
 (defun csrf-token-handler (request response)
-  (let* ((session-id (request-session-id request))
+  (let* ((session-id (or (request-session-id request) (generate-csrf-token)))
          (token (generate-csrf-token)))
     (wst.session.csrf:add-session-csrf-token *csrf-store* token :session-id session-id)
     (wst.routing:ok-response t response
