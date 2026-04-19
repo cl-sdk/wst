@@ -68,19 +68,15 @@ the default internal server error handler."
          (print-backtrace (and sb-debug-package
                                (find-symbol "PRINT-BACKTRACE" sb-debug-package))))
     (when (and print-backtrace (fboundp print-backtrace))
-      (or (ignore-errors
-            (with-output-to-string (stream)
-              (let ((*debug-io* stream)
-                    (*error-output* stream)
-                    (*standard-output* stream)
-                    (*trace-output* stream))
-                (funcall print-backtrace))))
-          (ignore-errors
-            (with-output-to-string (stream)
-              (funcall print-backtrace :stream stream)))
-          (ignore-errors
-            (with-output-to-string (stream)
-              (funcall print-backtrace nil :stream stream)))))))
+      (ignore-errors
+        (with-output-to-string (stream)
+          ;; PRINT-BACKTRACE output varies by implementation; on SBCL this
+          ;; captures the printed backtrace into a string for debug responses.
+          (let ((*debug-io* stream)
+                (*error-output* stream)
+                (*standard-output* stream)
+                (*trace-output* stream))
+            (funcall print-backtrace)))))))
 
 (defun development-condition-handler (request response err)
   "Condition handler tuned for development/debugging.
@@ -93,7 +89,7 @@ Prints a detailed error message to `*error-output*` and returns it as the
                           (request-uri request)
                           (type-of err)
                           err
-                          (if (and stack-trace (> (length stack-trace) 0))
+                          (if (and stack-trace (plusp (length stack-trace)))
                               stack-trace
                               "not available on this lisp implementation"))))
     (format *error-output* "~&~a~%" message)
