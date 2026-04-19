@@ -29,14 +29,14 @@ X-CSRF-Token: replace-with-token-from-csrf-endpoint
 Cookie: wst-example-session-id=replace-with-session-id-from-set-cookie
 
 #
-# Echo (form-urlencoded, unprotected)
+# Echo (form-urlencoded)
 POST :base/api/v1/echo
 Content-Type: application/x-www-form-urlencoded
 
 name=wst&lang=lisp
 
 #
-# Echo (JSON, unprotected)
+# Echo (JSON)
 POST :base/api/v1/echo
 Content-Type: application/json
 
