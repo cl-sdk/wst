@@ -62,6 +62,50 @@ when no specific route matches.")
 the default internal server error handler."
   (setf *condition-handler* fn))
 
+(defun %condition-stack-trace (err)
+  (declare (ignorable err))
+  (let* ((sb-debug-package (find-package :sb-debug))
+         (print-backtrace (and sb-debug-package
+                               (find-symbol "PRINT-BACKTRACE" sb-debug-package))))
+    (when (and print-backtrace (fboundp print-backtrace))
+      (ignore-errors
+        (with-output-to-string (stream)
+          ;; PRINT-BACKTRACE output varies by implementation; this targets
+          ;; SBCL when available and returns NIL on unsupported Lisps.
+          (let ((*debug-io* stream)
+                (*error-output* stream)
+                (*standard-output* stream)
+                (*trace-output* stream))
+            (funcall print-backtrace)))))))
+
+(defun development-condition-handler (request response err)
+  "Condition handler tuned for development/debugging.
+
+Prints a detailed error message to `*error-output*` and returns it as the
+500 response content."
+  (let* ((stack-trace (%condition-stack-trace err))
+         (message-template
+           (concatenate 'string
+                        "condition handled~%"
+                        "=================~%"
+                        "method: ~a~%"
+                        "uri: ~a~%"
+                        "type: ~a~%"
+                        "message: ~a~%"
+                        "~%"
+                        "stack trace:~%"
+                        "~a"))
+         (message (format nil message-template
+                          (request-method request)
+                          (request-uri request)
+                          (type-of err)
+                          err
+                          (if (and stack-trace (not (string= stack-trace "")))
+                              stack-trace
+                              "stack trace not available on this Lisp implementation"))))
+    (format *error-output* "~&~a~%" message)
+    (internal-server-error-response t response :content message)))
+
 (defun any-route-handler (method fn)
   "Sets a user-defined function FN as the handler for all requests
 matching METHOD when no specific route matches."
