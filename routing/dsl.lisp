@@ -117,12 +117,13 @@ Available constructs:
       (dolist (fn before-actions)
         (destructuring-bind (control . response)
             (funcall fn request response)
+          (declare (ignore response))
           (cond
             ((eq control :halt) (progn
                                   (setf halted t)
                                   (return)))
             ((eq control :continue) t)
-            (t (progn (print control) (error "middleware must return a pair of (:halt | :continue, response)"))))))
+            (t (error "middleware must return a pair of (:halt | :continue, response)")))))
       (unless halted
         (funcall handler request response))
       (dolist (fn after-actions)
