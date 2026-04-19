@@ -271,8 +271,8 @@
                            (error "something went wrong.")))
   (let ((rs (wst.routing:dispatch-route (wst.routing:make-request :uri "/" :method :GET))))
     (5am:is (= 500 (wst.routing:response-status rs)))
-     (wst.routing:remove-route 'unhandled-condition-route)
-     (wst.routing:condition-handler nil)))
+    (wst.routing:remove-route 'unhandled-condition-route)
+    (wst.routing:condition-handler nil)))
 
 ;;; any-route-handler
 
