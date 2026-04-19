@@ -127,17 +127,6 @@
   (declare (ignore request))
   (wst.routing:ok-response t response :content "ok"))
 
-(defun app-condition-handler (request response err)
-  (let ((message (format nil "condition handled~%method: ~a~%uri: ~a~%type: ~a~%message: ~a"
-                         (wst.routing:request-method request)
-                         (wst.routing:request-uri request)
-                         (type-of err)
-                         err)))
-    (format *error-output* "~&~a~%" message)
-    (wst.routing:internal-server-error-response
-     t response
-     :content message)))
-
 (defun users-handler (request response)
   (declare (ignore request))
   (wst.routing.response.dsl:status 200 response)
@@ -180,26 +169,27 @@
   (wst.routing:not-found-response t response :content "fallback route"))
 
 (defun build-app-routes ()
-  (wst.routing:condition-handler #'app-condition-handler)
+  (wst.routing:condition-handler #'wst.routing:development-condition-handler)
+
   (let ((cb-before (getf *circuit-breaker* :before))
         (cb-after (getf *circuit-breaker* :after)))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:group
-        (wst.routing.dsl:route :GET index "/" index-handler)
-        (wst.routing.dsl:route :GET health "/health" health-handler)
-        (wst.routing.dsl:route :GET boom "/boom" boom-handler)
-        (wst.routing.dsl:resource "/api/v1"
-                                  (wst.routing.dsl:route :GET users "/users" users-handler)
-                                  (wst.routing.dsl:route :GET csrf "/csrf" csrf-token-handler)
-                                  (wst.routing.dsl:wrap
-                                   :before (,csrf-before)
-                                   :route (wst.routing.dsl:route :POST csrf-check "/csrf/check" csrf-check-handler))
-                                  (wst.routing.dsl:wrap
-                                   :before (,*parse-content-middleware*)
-                                   :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
-                                  (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
-        (wst.routing.dsl:wrap
-         :before (,cb-before rate-limit-before)
+       (wst.routing.dsl:route :GET index "/" index-handler)
+       (wst.routing.dsl:route :GET health "/health" health-handler)
+       (wst.routing.dsl:route :GET boom "/boom" boom-handler)
+       (wst.routing.dsl:resource "/api/v1"
+                                 (wst.routing.dsl:route :GET users "/users" users-handler)
+                                 (wst.routing.dsl:route :GET csrf "/csrf" csrf-token-handler)
+                                 (wst.routing.dsl:wrap
+                                  :before (wst.example.woo-application::csrf-before)
+                                  :route (wst.routing.dsl:route :POST csrf-check "/csrf/check" csrf-check-handler))
+                                 (wst.routing.dsl:wrap
+                                  :before (,*parse-content-middleware*)
+                                  :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
+                                 (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
+       (wst.routing.dsl:wrap
+        :before (,cb-before rate-limit-before)
         :after (,cb-after)
         :route (wst.routing.dsl:route :GET flaky "/api/v1/flaky" flaky-handler))
        (wst.routing.dsl:any-route :GET not-found-handler)))))
