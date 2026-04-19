@@ -17,4 +17,5 @@
                #:io.github.cl-sdk.wst.trace-context.routing.test
                #:io.github.cl-sdk.wst.feature-flag.test
                #:io.github.cl-sdk.wst.feature-flag.routing.test
-               #:io.github.cl-sdk.wst.session.sqlite.test))
+               #:io.github.cl-sdk.wst.session.sqlite.test
+               #:io.github.cl-sdk.wst.rate-limit.redis-store.test))
