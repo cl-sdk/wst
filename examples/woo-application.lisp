@@ -2,6 +2,7 @@
                 :wst.routing.dsl
                 :wst.routing.response.dsl
                 :wst.routing.woo
+                :wst.session.csrf
                 :wst.request-content
                 :wst.request-content.routing
                 :wst.cookies
@@ -25,6 +26,13 @@
 (defparameter *parse-content-middleware*
   (wst.request-content.routing:parse-request-content))
 
+(defclass example-session-csrf-store ()
+  ((tokens
+    :initform (make-hash-table :test 'equal)
+    :accessor store-tokens)))
+
+(defparameter *csrf-store* (make-instance 'example-session-csrf-store))
+
 (defun generate-csrf-token ()
   (labels ((bytes->hex (bytes)
              (with-output-to-string (out)
@@ -38,11 +46,30 @@
           (error "failed to read enough random bytes for csrf token"))
         (bytes->hex bytes)))))
 
+(defmethod wst.session.csrf:session-csrf-token ((obj example-session-csrf-store) &key session-id &allow-other-keys)
+  (gethash session-id (store-tokens obj)))
+
+(defmethod wst.session.csrf:add-session-csrf-token ((obj example-session-csrf-store) key &key session-id &allow-other-keys)
+  (setf (gethash session-id (store-tokens obj)) key))
+
+(defmethod wst.session.csrf:remove-session-csrf-token ((obj example-session-csrf-store) &key session-id &allow-other-keys)
+  (remhash session-id (store-tokens obj)))
+
+(defmethod wst.session.csrf:verify-session-csrf-token ((obj example-session-csrf-store) key &key session-id &allow-other-keys)
+  (let ((stored (wst.session.csrf:session-csrf-token obj :session-id session-id)))
+    (and stored key (string= stored key))))
+
+(defun request-session-id (request)
+  (let* ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request)))
+         (session-id (cdr (assoc "wst-example-session-id" cookies :test #'string=))))
+    (or session-id (generate-csrf-token))))
+
 (defun csrf-token-handler (request response)
-  (declare (ignore request))
-  (let ((token (generate-csrf-token)))
+  (let* ((session-id (request-session-id request))
+         (token (generate-csrf-token)))
+    (wst.session.csrf:add-session-csrf-token *csrf-store* token :session-id session-id)
     (wst.routing:ok-response t response
-                             :headers (list :set-cookie (format nil "csrf-token=~a; Path=/; SameSite=Strict" token)
+                             :headers (list :set-cookie (format nil "wst-example-session-id=~a; Path=/; SameSite=Strict" session-id)
                                             :x-csrf-token token)
                              :content token)))
 
@@ -50,13 +77,13 @@
   (let ((method (wst.routing:request-method request)))
     (if (member method '(:POST :PUT :PATCH :DELETE))
         (let* ((headers (wst.routing:request-headers request))
+               (session-id (request-session-id request))
                (header-token (gethash "x-csrf-token" headers))
-               (cookies (wst.cookies:parse-cookies headers))
-               (cookie-token (cdr (assoc "csrf-token" cookies :test #'string=))))
+               (stored-token (wst.session.csrf:session-csrf-token *csrf-store* :session-id session-id)))
            (cond
-             ((or (null header-token) (null cookie-token))
+             ((or (null header-token) (null stored-token))
               (cons :halt (wst.routing:forbidden-response t response :content "Missing CSRF token")))
-             ((string= header-token cookie-token)
+             ((wst.session.csrf:verify-session-csrf-token *csrf-store* header-token :session-id session-id)
               (cons :continue response))
              (t
               (cons :halt (wst.routing:forbidden-response t response :content "Invalid CSRF token")))))
