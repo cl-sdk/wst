@@ -28,7 +28,7 @@ command arguments.")
    (ssl :initarg :ssl :initform nil :reader redis-store-ssl)
    (verify :initarg :verify :initform nil :reader redis-store-verify)
    (certificate :initarg :certificate :initform nil :reader redis-store-certificate)
-   (key :initarg :key :initform nil :reader redis-store-key)
+   (ssl-key :initarg :ssl-key :initform nil :reader redis-store-ssl-key)
    (cipher-list :initarg :cipher-list :initform nil :reader redis-store-cipher-list)
    (connection-fn :initarg :connection-fn
                   :initform (lambda (store thunk)
@@ -38,7 +38,7 @@ command arguments.")
                                                                  :ssl (redis-store-ssl store)
                                                                  :verify (redis-store-verify store)
                                                                  :certificate (redis-store-certificate store)
-                                                                 :key (redis-store-key store)
+                                                                 :key (redis-store-ssl-key store)
                                                                  :cipher-list (redis-store-cipher-list store))
                                 (funcall thunk)))
                   :reader redis-store-connection-fn))
@@ -48,6 +48,7 @@ Slots:
 - KEY-PREFIX: string prefix used to namespace Redis keys.
 - WINDOW-SECONDS: optional TTL set on each saved key via EXPIRE.
 - HOST/PORT/AUTH/SSL/VERIFY/CERTIFICATE/KEY/CIPHER-LIST: Redis connection options.
+- HOST defaults to #(127 0 0 1), matching CL-REDIS defaults; strings like \"127.0.0.1\" are also valid.
 - CONNECTION-FN: function called as (connection-fn store thunk) to execute Redis calls."))
 
 (defun redis-store--with-connection (store thunk)
@@ -82,8 +83,9 @@ Slots:
          (ttl (redis-store-window-seconds store)))
     (redis-store--with-connection store
       (lambda ()
-        (redis:hset redis-key "count" (write-to-string count))
-        (redis:hset redis-key "start" (write-to-string start-time))))
+        (redis:hmset redis-key
+                     "count" (write-to-string count)
+                     "start" (write-to-string start-time))))
     (when (and ttl (plusp ttl))
       (redis-store--with-connection store
         (lambda () (redis:expire redis-key ttl))))

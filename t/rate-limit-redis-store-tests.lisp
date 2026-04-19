@@ -12,42 +12,48 @@
   (let ((records (make-hash-table :test #'equal))
         (expiries (make-hash-table :test #'equal)))
     (values
-     records
-     expiries)))
+      records
+      expiries)))
+
+(defun ensure-rate-limit-entry (records key)
+  (or (gethash key records)
+      (setf (gethash key records) (make-hash-table :test #'equal))))
 
 (defmacro with-mocked-rate-limit-redis ((records expiries) &body body)
   `(let* ((hmget-original (symbol-function 'redis:hmget))
-          (hset-original (symbol-function 'redis:hset))
+          (hmset-original (symbol-function 'redis:hmset))
           (expire-original (symbol-function 'redis:expire))
           (del-original (symbol-function 'redis:del)))
      (unwind-protect
           (progn
             (setf (symbol-function 'redis:hmget)
                   (lambda (key field &rest fields)
-                    (declare (ignore fields))
-                    (let ((entry (gethash key ,records)))
-                      (list (and entry (getf entry (intern (string-upcase field) :keyword)))
-                            (and entry (getf entry :START)))))
-                  (symbol-function 'redis:hset)
-                  (lambda (key field value)
-                    (setf (gethash key ,records)
-                          (list* (intern (string-upcase field) :keyword) value
-                                 (or (gethash key ,records) nil)))
-                    t)
+                    (let* ((entry (gethash key ,records))
+                           (wanted-fields (cons field fields)))
+                      (mapcar (lambda (field-name)
+                                (and entry (gethash field-name entry)))
+                              wanted-fields)))
+                  (symbol-function 'redis:hmset)
+                  (lambda (key &rest fields-and-values)
+                    (let ((entry (ensure-rate-limit-entry ,records key)))
+                      (loop for (field value) on fields-and-values by #'cddr
+                            do (setf (gethash field entry) value)))
+                    "OK")
                   (symbol-function 'redis:expire)
                   (lambda (key ttl)
                     (setf (gethash key ,expiries) ttl)
                     t)
                   (symbol-function 'redis:del)
                   (lambda (key &rest keys)
-                    (declare (ignore keys))
-                    (let ((removed (if (gethash key ,records) 1 0)))
-                      (remhash key ,records)
-                      (remhash key ,expiries)
-                      removed)))
+                    (let ((removed 0))
+                      (dolist (k (cons key keys) removed)
+                        (when (gethash k ,records)
+                          (incf removed))
+                        (remhash k ,records)
+                        (remhash k ,expiries)))))
             ,@body)
        (setf (symbol-function 'redis:hmget) hmget-original
-             (symbol-function 'redis:hset) hset-original
+             (symbol-function 'redis:hmset) hmset-original
              (symbol-function 'redis:expire) expire-original
              (symbol-function 'redis:del) del-original))))
 
