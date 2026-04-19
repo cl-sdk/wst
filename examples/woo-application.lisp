@@ -57,20 +57,30 @@
   (wst.routing.response.dsl:status 200 response)
   (wst.routing.response.dsl:json t "{\"users\":[{\"id\":1,\"name\":\"alice\"}]}" response))
 
+(defmethod wst.request-content:parse-content
+    ((type (eql :|application/json|)) content &optional (encoding :utf-8))
+  (declare (ignore type))
+  (com.inuoe.jzon:parse (wst.request-content:content-as-string content encoding)))
+
 (defun echo-handler (request response)
   (let* ((content-type (or (wst.routing:request-content-type request) "text/plain"))
          (parsed-type (or (car (wst.request-content:parse-content-type content-type))
                           (cons :|text/plain| nil))))
     (destructuring-bind (mime . options) parsed-type
       (let* ((charset (cdr (assoc "charset" options :test #'string=)))
-             (encoding (if (string-equal charset "utf-8")
-                           :utf-8
-                           :us-ascii))
-             (body (wst.request-content:parse-content
-                    mime
-                    (wst.routing:request-content request)
-                    encoding)))
-        (wst.routing:ok-response t response :content (format nil "~a" body))))))
+              (encoding (if (string-equal charset "utf-8")
+                            :utf-8
+                            :us-ascii)))
+        (handler-case
+            (let ((body (wst.request-content:parse-content
+                         mime
+                         (wst.routing:request-content request)
+                         encoding)))
+              (wst.routing:ok-response t response :content (format nil "~a" body)))
+          (error (err)
+            (format *error-output* "~&request content parse failed: ~a~%" err)
+            (wst.routing:bad-request-response t response))))
+      )))
 
 (defun cookies-handler (request response)
   (let ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request))))
