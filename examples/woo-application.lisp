@@ -33,7 +33,7 @@
 
 (defparameter *csrf-store* (make-instance 'example-session-csrf-store))
 
-(defun generate-csrf-token ()
+(defun generate-random-token ()
   (labels ((bytes->hex (bytes)
              (with-output-to-string (out)
                (loop for b across bytes
@@ -45,6 +45,12 @@
         (unless (= (read-sequence bytes stream) (length bytes))
           (error "failed to read enough random bytes for csrf token"))
         (bytes->hex bytes)))))
+
+(defun generate-csrf-token ()
+  (generate-random-token))
+
+(defun generate-session-id ()
+  (generate-random-token))
 
 (defmethod wst.session.csrf:session-csrf-token ((obj example-session-csrf-store) &key session-id &allow-other-keys)
   (gethash session-id (store-tokens obj)))
@@ -65,7 +71,7 @@
     session-id))
 
 (defun csrf-token-handler (request response)
-  (let* ((session-id (or (request-session-id request) (generate-csrf-token)))
+  (let* ((session-id (or (request-session-id request) (generate-session-id)))
          (token (generate-csrf-token)))
     (wst.session.csrf:add-session-csrf-token *csrf-store* token :session-id session-id)
     (wst.routing:ok-response t response
