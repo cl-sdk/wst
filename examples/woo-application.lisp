@@ -68,14 +68,18 @@
                           (cons :|text/plain| nil))))
     (destructuring-bind (mime . options) parsed-type
       (let* ((charset (cdr (assoc "charset" options :test #'string=)))
-             (encoding (if (string-equal charset "utf-8")
-                           :utf-8
-                           :us-ascii))
-             (body (wst.request-content:parse-content
-                    mime
-                    (wst.routing:request-content request)
-                    encoding)))
-        (wst.routing:ok-response t response :content (format nil "~a" body))))))
+              (encoding (if (string-equal charset "utf-8")
+                            :utf-8
+                            :us-ascii)))
+        (handler-case
+            (let ((body (wst.request-content:parse-content
+                         mime
+                         (wst.routing:request-content request)
+                         encoding)))
+              (wst.routing:ok-response t response :content (format nil "~a" body)))
+          (error ()
+            (wst.routing:bad-request-response t response))))
+      )))
 
 (defun cookies-handler (request response)
   (let ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request))))
