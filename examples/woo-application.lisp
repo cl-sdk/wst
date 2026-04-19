@@ -152,6 +152,10 @@
   (let ((body (wst.routing:request-content request)))
     (wst.routing:ok-response t response :content (format nil "~a" body))))
 
+(defun csrf-check-handler (request response)
+  (declare (ignore request))
+  (wst.routing:ok-response t response :content "csrf token valid"))
+
 (defun cookies-handler (request response)
   (let ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request))))
     (wst.routing:ok-response t response
@@ -188,7 +192,10 @@
                                   (wst.routing.dsl:route :GET users "/users" users-handler)
                                   (wst.routing.dsl:route :GET csrf "/csrf" csrf-token-handler)
                                   (wst.routing.dsl:wrap
-                                   :before (,*parse-content-middleware* csrf-before)
+                                   :before (,csrf-before)
+                                   :route (wst.routing.dsl:route :POST csrf-check "/csrf/check" csrf-check-handler))
+                                  (wst.routing.dsl:wrap
+                                   :before (,*parse-content-middleware*)
                                    :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
                                   (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
         (wst.routing.dsl:wrap

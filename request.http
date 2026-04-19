@@ -22,21 +22,23 @@ GET :base/api/v1/users
 GET :base/api/v1/csrf
 
 #
-# Echo (form-urlencoded)
+# CSRF check (protected POST)
 # Copy both values from GET /api/v1/csrf.
-POST :base/api/v1/echo
-Content-Type: application/x-www-form-urlencoded
+POST :base/api/v1/csrf/check
 X-CSRF-Token: replace-with-token-from-csrf-endpoint
 Cookie: wst-example-session-id=replace-with-session-id-from-set-cookie
+
+#
+# Echo (form-urlencoded, unprotected)
+POST :base/api/v1/echo
+Content-Type: application/x-www-form-urlencoded
 
 name=wst&lang=lisp
 
 #
-# Echo (JSON)
+# Echo (JSON, unprotected)
 POST :base/api/v1/echo
 Content-Type: application/json
-X-CSRF-Token: replace-with-token-from-csrf-endpoint
-Cookie: wst-example-session-id=replace-with-session-id-from-set-cookie
 
 {"name":"wst","lang":"lisp"}
 
