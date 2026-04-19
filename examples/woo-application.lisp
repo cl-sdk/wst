@@ -2,7 +2,6 @@
                 :wst.routing.dsl
                 :wst.routing.response.dsl
                 :wst.routing.woo
-                :wst.session.csrf
                 :wst.request-content
                 :wst.request-content.routing
                 :wst.cookies
@@ -26,53 +25,41 @@
 (defparameter *parse-content-middleware*
   (wst.request-content.routing:parse-request-content))
 
-(defclass csrf-store ()
-  ((tokens
-    :initform (make-hash-table :test 'equal)
-    :accessor csrf-store-tokens)))
-
-(defparameter *csrf-store* (make-instance 'csrf-store))
-
-(defun request-client-id (request)
-  (or (gethash "x-forwarded-for" (wst.routing:request-headers request))
-      "global"))
-
 (defun generate-csrf-token ()
-  (format nil "~36R~36R"
-          (random most-positive-fixnum)
-          (get-universal-time)))
-
-(defmethod wst.session.csrf:session-csrf-token ((store csrf-store) &key client-id)
-  (gethash client-id (csrf-store-tokens store)))
-
-(defmethod wst.session.csrf:add-session-csrf-token ((store csrf-store) key &key client-id)
-  (setf (gethash client-id (csrf-store-tokens store)) key))
-
-(defmethod wst.session.csrf:remove-session-csrf-token ((store csrf-store) &key client-id)
-  (remhash client-id (csrf-store-tokens store)))
-
-(defmethod wst.session.csrf:verify-session-csrf-token ((store csrf-store) key &key client-id)
-  (let ((current (wst.session.csrf:session-csrf-token store :client-id client-id)))
-    (and current (string= current key))))
+  (labels ((bytes->hex (bytes)
+             (with-output-to-string (out)
+               (loop for b across bytes
+                     do (format out "~2,'0X" b)))))
+    (with-open-file (stream "/dev/urandom"
+                            :direction :input
+                            :element-type '(unsigned-byte 8))
+      (let ((bytes (make-array 32 :element-type '(unsigned-byte 8))))
+        (unless (= (read-sequence bytes stream) (length bytes))
+          (error "failed to read enough random bytes for csrf token"))
+        (bytes->hex bytes)))))
 
 (defun csrf-token-handler (request response)
-  (let* ((client-id (request-client-id request))
-         (token (generate-csrf-token)))
-    (wst.session.csrf:add-session-csrf-token *csrf-store* token :client-id client-id)
+  (declare (ignore request))
+  (let ((token (generate-csrf-token)))
     (wst.routing:ok-response t response
-                             :headers (list :x-csrf-token token)
+                             :headers (list :set-cookie (format nil "csrf-token=~a; Path=/; SameSite=Strict" token)
+                                            :x-csrf-token token)
                              :content token)))
 
 (defun csrf-before (request response)
   (let ((method (wst.routing:request-method request)))
     (if (member method '(:POST :PUT :PATCH :DELETE))
-        (let ((token (gethash "x-csrf-token" (wst.routing:request-headers request))))
-          (if (wst.session.csrf:verify-session-csrf-token
-               *csrf-store*
-               token
-               :client-id (request-client-id request))
-              (cons :continue response)
-              (cons :halt (wst.routing:forbidden-response t response :content "invalid csrf token"))))
+        (let* ((headers (wst.routing:request-headers request))
+               (header-token (gethash "x-csrf-token" headers))
+               (cookies (wst.cookies:parse-cookies headers))
+               (cookie-token (cdr (assoc "csrf-token" cookies :test #'string=))))
+           (cond
+             ((or (null header-token) (null cookie-token))
+              (cons :halt (wst.routing:forbidden-response t response :content "Missing CSRF token")))
+             ((string= header-token cookie-token)
+              (cons :continue response))
+             (t
+              (cons :halt (wst.routing:forbidden-response t response :content "Invalid CSRF token")))))
         (cons :continue response))))
 
 (defun rate-limit-before (request response)
