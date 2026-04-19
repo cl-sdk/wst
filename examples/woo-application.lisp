@@ -3,6 +3,7 @@
                 :wst.routing.response.dsl
                 :wst.routing.woo
                 :wst.request-content
+                :wst.request-content.routing
                 :wst.cookies
                 :wst.rate-limit
                 :wst.circuit-breaker.routing
@@ -20,6 +21,9 @@
 
 (defparameter *rate-limiter*
   (wst.rate-limit:rate-limit :max-requests 5 :window-seconds 30))
+
+(defparameter *parse-content-middleware*
+  (wst.request-content.routing:parse-request-content))
 
 (defun rate-limit-before (request response)
   (multiple-value-bind (allowed-p retry-after)
@@ -63,24 +67,8 @@
   (com.inuoe.jzon:parse (wst.request-content:content-as-string content encoding)))
 
 (defun echo-handler (request response)
-  (let* ((content-type (or (wst.routing:request-content-type request) "text/plain"))
-         (parsed-type (or (car (wst.request-content:parse-content-type content-type))
-                          (cons :|text/plain| nil))))
-    (destructuring-bind (mime . options) parsed-type
-      (let* ((charset (cdr (assoc "charset" options :test #'string=)))
-              (encoding (if (string-equal charset "utf-8")
-                            :utf-8
-                            :us-ascii)))
-        (handler-case
-            (let ((body (wst.request-content:parse-content
-                         mime
-                         (wst.routing:request-content request)
-                         encoding)))
-              (wst.routing:ok-response t response :content (format nil "~a" body)))
-          (error (err)
-            (format *error-output* "~&request content parse failed: ~a~%" err)
-            (wst.routing:bad-request-response t response))))
-      )))
+  (let ((body (wst.routing:request-content request)))
+    (wst.routing:ok-response t response :content (format nil "~a" body))))
 
 (defun cookies-handler (request response)
   (let ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request))))
@@ -116,7 +104,9 @@
         (wst.routing.dsl:route :GET boom "/boom" boom-handler)
         (wst.routing.dsl:resource "/api/v1"
                                  (wst.routing.dsl:route :GET users "/users" users-handler)
-                                 (wst.routing.dsl:route :POST echo "/echo" echo-handler)
+                                 (wst.routing.dsl:wrap
+                                  :before ,*parse-content-middleware*
+                                  :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
                                  (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
        (wst.routing.dsl:wrap
         :before (,cb-before rate-limit-before)

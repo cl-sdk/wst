@@ -10,6 +10,7 @@
                #:fiveam
                #:wst.http
                #:wst.request-content
+               #:wst.request-content.routing
                #:wst.circuit-breaker
                #:wst.circuit-breaker.routing
                #:wst.cookies
@@ -29,4 +30,5 @@
                (:file "rate-limit-tests")
                (:file "routing-woo-tests")
                (:file "response-dsl-tests")
-               (:file "request-content-tests")))
+               (:file "request-content-tests")
+               (:file "request-content-routing-tests")))
