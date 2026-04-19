@@ -70,8 +70,8 @@ the default internal server error handler."
     (when (and print-backtrace (fboundp print-backtrace))
       (ignore-errors
         (with-output-to-string (stream)
-          ;; PRINT-BACKTRACE output varies by implementation; on SBCL this
-          ;; captures the printed backtrace into a string for debug responses.
+          ;; PRINT-BACKTRACE output varies by implementation; this targets
+          ;; SBCL when available and returns NIL on unsupported Lisps.
           (let ((*debug-io* stream)
                 (*error-output* stream)
                 (*standard-output* stream)
@@ -91,7 +91,7 @@ Prints a detailed error message to `*error-output*` and returns it as the
                           err
                           (if (and stack-trace (plusp (length stack-trace)))
                               stack-trace
-                              "not available on this lisp implementation"))))
+                              "stack trace not available on this Lisp implementation"))))
     (format *error-output* "~&~a~%" message)
     (internal-server-error-response t response :content message)))
 
