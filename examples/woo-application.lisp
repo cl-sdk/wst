@@ -205,9 +205,9 @@
 
 (defun woo-signal-symbol (name)
   (or (find-symbol name :woo.signal)
-      (error "Woo internal symbol ~s not found in package WOO.SIGNAL" name)))
+      (error "Woo internal symbol ~a not found in package WOO.SIGNAL" name)))
 
-(defun graceful-shutdown-signal-handlers ()
+(defun make-graceful-shutdown-signals ()
   "Map SIGINT/SIGQUIT/SIGTERM to Woo's graceful shutdown callback."
   (let ((graceful-callback-symbol (woo-signal-symbol "SIGQUIT-CB")))
     (list (cons +sigint+ graceful-callback-symbol)
@@ -219,7 +219,7 @@
   (format t "~&Starting example app on http://localhost:~a~%" port)
   (format t "~&Press Ctrl+C to stop gracefully.~%")
   (let ((signals-symbol (woo-signal-symbol "*SIGNALS*")))
-    (progv (list signals-symbol) (list (graceful-shutdown-signal-handlers))
+    (progv (list signals-symbol) (list (make-graceful-shutdown-signals))
       (woo:run #'app :port port))))
 
 (start)
