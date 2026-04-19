@@ -202,6 +202,11 @@
 (defun start (&key (port 3000))
   (build-app-routes)
   (format t "~&Starting example app on http://localhost:~a~%" port)
-  (woo:run #'app :port port))
+  (format t "~&Press Ctrl+C to stop gracefully.~%")
+  (let ((woo.signal::*signals*
+          '((2 . woo.signal::sigquit-cb)
+            (3 . woo.signal::sigquit-cb)
+            (15 . woo.signal::sigquit-cb))))
+    (woo:run #'app :port port)))
 
 (start)
