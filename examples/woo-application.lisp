@@ -77,7 +77,8 @@
                          (wst.routing:request-content request)
                          encoding)))
               (wst.routing:ok-response t response :content (format nil "~a" body)))
-          (error ()
+          (error (err)
+            (format *error-output* "~&request content parse failed: ~a~%" err)
             (wst.routing:bad-request-response t response))))
       )))
 
