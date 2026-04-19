@@ -113,7 +113,7 @@ Middleware adapter that parses request bodies and stores the parsed value in
 
 ```lisp
 (defparameter parse-content-middleware
-  (wst.request-content.routing:parse-request-content-middleware))
+  (wst.request-content.routing:parse-request-content))
 
 (wst.routing.dsl:build-webserver
  `(wst.routing.dsl:wrap

@@ -7,7 +7,7 @@
 
 (def-route-testing request-content-middleware-parses-form-urlencoded-content ()
   (let ((parsed-content nil)
-        (middleware (wst.request-content.routing:parse-request-content-middleware)))
+        (middleware (wst.request-content.routing:parse-request-content)))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:wrap
        :before ,middleware
@@ -32,7 +32,7 @@
 
 (def-route-testing request-content-middleware-halts-with-400-when-parsing-fails ()
   (let ((calls 0)
-        (middleware (wst.request-content.routing:parse-request-content-middleware)))
+        (middleware (wst.request-content.routing:parse-request-content)))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:wrap
        :before ,middleware
@@ -50,7 +50,7 @@
 
 (def-route-testing request-content-middleware-uses-configured-default-content-type ()
   (let ((parsed-content nil)
-        (middleware (wst.request-content.routing:parse-request-content-middleware
+        (middleware (wst.request-content.routing:parse-request-content
                      :default-content-type "application/x-www-form-urlencoded")))
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:wrap
