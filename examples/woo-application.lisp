@@ -100,14 +100,14 @@
     (wst.routing.dsl:build-webserver
      `(wst.routing.dsl:group
         (wst.routing.dsl:route :GET index "/" index-handler)
-         (wst.routing.dsl:route :GET health "/health" health-handler)
-         (wst.routing.dsl:route :GET boom "/boom" boom-handler)
-         (wst.routing.dsl:resource "/api/v1"
-                                  (wst.routing.dsl:route :GET users "/users" users-handler)
-                                  (wst.routing.dsl:wrap
-                                   :before ,*parse-content-middleware*
-                                   :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
-                                  (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
+        (wst.routing.dsl:route :GET health "/health" health-handler)
+        (wst.routing.dsl:route :GET boom "/boom" boom-handler)
+        (wst.routing.dsl:resource "/api/v1"
+                                 (wst.routing.dsl:route :GET users "/users" users-handler)
+                                 (wst.routing.dsl:wrap
+                                  :before ,*parse-content-middleware*
+                                  :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
+                                 (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
        (wst.routing.dsl:wrap
         :before (,cb-before rate-limit-before)
         :after (,cb-after)
