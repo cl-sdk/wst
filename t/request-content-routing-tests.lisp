@@ -47,3 +47,23 @@
                       :content "x"))))
       (5am:is (= 0 calls))
       (5am:is (= 400 (wst.routing:response-status response))))))
+
+(def-route-testing request-content-middleware-uses-configured-default-content-type ()
+  (let ((parsed-content nil)
+        (middleware (wst.request-content.routing:parse-request-content-middleware
+                     :default-content-type "application/x-www-form-urlencoded")))
+    (wst.routing.dsl:build-webserver
+     `(wst.routing.dsl:wrap
+       :before ,middleware
+       :route (wst.routing.dsl:route :POST default-content-type "/" (lambda (request response)
+                                                                       (setf parsed-content (getf (wst.routing:request-data request) :content))
+                                                                       (wst.routing:ok-response t response :content "ok")
+                                                                       response))))
+    (let ((response (wst.routing:dispatch-route
+                     (wst.routing:make-request
+                      :uri "/"
+                      :method :POST
+                      :content-type ""
+                      :content "name=alice+smith"))))
+      (5am:is (= 200 (wst.routing:response-status response)))
+      (5am:is (equal '(("name" . "alice smith")) parsed-content)))))
