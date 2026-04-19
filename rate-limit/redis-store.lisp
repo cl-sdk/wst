@@ -16,26 +16,42 @@ command arguments.")
 (in-package :io.github.cl-sdk.wst.rate-limit.redis-store)
 
 (defclass redis-store ()
-  ((command-fn :initarg :command-fn
-               :initform (lambda (&rest _)
-                           (declare (ignore _))
-                           (error "No Redis command function configured. Pass :COMMAND-FN when creating REDIS-STORE."))
-               :reader redis-store-command-fn)
-   (key-prefix :initarg :key-prefix
+  ((key-prefix :initarg :key-prefix
                :initform "wst:rate-limit:"
                :reader redis-store-key-prefix)
    (window-seconds :initarg :window-seconds
-                   :initform nil
-                   :reader redis-store-window-seconds))
+                    :initform nil
+                    :reader redis-store-window-seconds)
+   (host :initarg :host :initform #(127 0 0 1) :reader redis-store-host)
+   (port :initarg :port :initform 6379 :reader redis-store-port)
+   (auth :initarg :auth :initform nil :reader redis-store-auth)
+   (ssl :initarg :ssl :initform nil :reader redis-store-ssl)
+   (verify :initarg :verify :initform nil :reader redis-store-verify)
+   (certificate :initarg :certificate :initform nil :reader redis-store-certificate)
+   (key :initarg :key :initform nil :reader redis-store-key)
+   (cipher-list :initarg :cipher-list :initform nil :reader redis-store-cipher-list)
+   (connection-fn :initarg :connection-fn
+                  :initform (lambda (store thunk)
+                              (redis:with-recursive-connection (:host (redis-store-host store)
+                                                                 :port (redis-store-port store)
+                                                                 :auth (redis-store-auth store)
+                                                                 :ssl (redis-store-ssl store)
+                                                                 :verify (redis-store-verify store)
+                                                                 :certificate (redis-store-certificate store)
+                                                                 :key (redis-store-key store)
+                                                                 :cipher-list (redis-store-cipher-list store))
+                                (funcall thunk)))
+                  :reader redis-store-connection-fn))
   (:documentation "Redis-backed implementation of the rate-limit store protocol.
 
 Slots:
-- COMMAND-FN: function called as (command-fn command &rest args).
 - KEY-PREFIX: string prefix used to namespace Redis keys.
-- WINDOW-SECONDS: optional TTL set on each saved key via EXPIRE."))
+- WINDOW-SECONDS: optional TTL set on each saved key via EXPIRE.
+- HOST/PORT/AUTH/SSL/VERIFY/CERTIFICATE/KEY/CIPHER-LIST: Redis connection options.
+- CONNECTION-FN: function called as (connection-fn store thunk) to execute Redis calls."))
 
-(defun redis-store--call (store command &rest args)
-  (apply (redis-store-command-fn store) command args))
+(defun redis-store--with-connection (store thunk)
+  (funcall (redis-store-connection-fn store) store thunk))
 
 (defun redis-store--key (store key)
   (format nil "~a~a" (redis-store-key-prefix store) (write-to-string key :readably t)))
@@ -51,7 +67,8 @@ Slots:
 
 (defmethod io.github.cl-sdk.wst.rate-limit.store:fetch-window ((store redis-store) key)
   (let* ((redis-key (redis-store--key store key))
-         (reply (redis-store--call store "HMGET" redis-key "count" "start"))
+         (reply (redis-store--with-connection store
+                  (lambda () (redis:hmget redis-key "count" "start"))))
          (count-raw (and (listp reply) (first reply)))
          (start-raw (and (listp reply) (second reply)))
          (count (redis-store--integer-or-nil count-raw))
@@ -63,12 +80,15 @@ Slots:
 (defmethod io.github.cl-sdk.wst.rate-limit.store:save-window ((store redis-store) key count start-time)
   (let* ((redis-key (redis-store--key store key))
          (ttl (redis-store-window-seconds store)))
-    (redis-store--call store "HSET" redis-key
-                       "count" (write-to-string count)
-                       "start" (write-to-string start-time))
+    (redis-store--with-connection store
+      (lambda ()
+        (redis:hset redis-key "count" (write-to-string count))
+        (redis:hset redis-key "start" (write-to-string start-time))))
     (when (and ttl (plusp ttl))
-      (redis-store--call store "EXPIRE" redis-key ttl))
+      (redis-store--with-connection store
+        (lambda () (redis:expire redis-key ttl))))
     t))
 
-(defmethod io.github.cl-sdk.wst.rate-limit.store:delete-window ((store redis-store) key)
-  (redis-store--call store "DEL" (redis-store--key store key)))
+(defmethod wst.rate-limit.store:delete-window ((store redis-store) key)
+  (redis-store--with-connection store
+    (lambda () (redis:del (redis-store--key store key)))))

@@ -3,7 +3,8 @@
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.0.1"
-  :depends-on (#:io.github.cl-sdk.wst.rate-limit)
+  :depends-on (#:io.github.cl-sdk.wst.rate-limit
+	       #:cl-redis)
   :pathname "rate-limit"
   :serial t
   :components ((:file "redis-store")))

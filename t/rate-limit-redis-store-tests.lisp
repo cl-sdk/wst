@@ -12,36 +12,47 @@
   (let ((records (make-hash-table :test #'equal))
         (expiries (make-hash-table :test #'equal)))
     (values
-     (lambda (command &rest args)
-       (cond
-         ((string= command "HMGET")
-          (destructuring-bind (key field1 field2) args
-            (let ((entry (gethash key records)))
-              (list (and entry (getf entry (intern (string-upcase field1) :keyword)))
-                    (and entry (getf entry (intern (string-upcase field2) :keyword)))))))
-         ((string= command "HSET")
-          (destructuring-bind (key field1 value1 field2 value2) args
-            (setf (gethash key records)
-                  (list (intern (string-upcase field1) :keyword) value1
-                        (intern (string-upcase field2) :keyword) value2))
-            1))
-         ((string= command "EXPIRE")
-          (destructuring-bind (key ttl) args
-            (setf (gethash key expiries) ttl)
-            1))
-         ((string= command "DEL")
-          (destructuring-bind (key) args
-            (let ((removed (if (gethash key records) 1 0)))
-              (remhash key records)
-              (remhash key expiries)
-              removed)))
-         (t
-          (error "Unknown Redis command in test fake: ~a" command))))
      records
      expiries)))
 
+(defmacro with-mocked-rate-limit-redis ((records expiries) &body body)
+  `(let* ((hmget-original (symbol-function 'redis:hmget))
+          (hset-original (symbol-function 'redis:hset))
+          (expire-original (symbol-function 'redis:expire))
+          (del-original (symbol-function 'redis:del)))
+     (unwind-protect
+          (progn
+            (setf (symbol-function 'redis:hmget)
+                  (lambda (key field &rest fields)
+                    (declare (ignore fields))
+                    (let ((entry (gethash key ,records)))
+                      (list (and entry (getf entry (intern (string-upcase field) :keyword)))
+                            (and entry (getf entry :START)))))
+                  (symbol-function 'redis:hset)
+                  (lambda (key field value)
+                    (setf (gethash key ,records)
+                          (list* (intern (string-upcase field) :keyword) value
+                                 (or (gethash key ,records) nil)))
+                    t)
+                  (symbol-function 'redis:expire)
+                  (lambda (key ttl)
+                    (setf (gethash key ,expiries) ttl)
+                    t)
+                  (symbol-function 'redis:del)
+                  (lambda (key &rest keys)
+                    (declare (ignore keys))
+                    (let ((removed (if (gethash key ,records) 1 0)))
+                      (remhash key ,records)
+                      (remhash key ,expiries)
+                      removed)))
+            ,@body)
+       (setf (symbol-function 'redis:hmget) hmget-original
+             (symbol-function 'redis:hset) hset-original
+             (symbol-function 'redis:expire) expire-original
+             (symbol-function 'redis:del) del-original))))
+
 (5am:def-test redis-rate-limit-store-roundtrip ()
-  (multiple-value-bind (command-fn _records _expiries)
+  (multiple-value-bind (records expiries)
       (make-rate-limit-fake-redis)
     (declare (ignore _records _expiries))
     (let ((store (make-instance 'io.github.cl-sdk.wst.rate-limit.redis-store:redis-store
@@ -62,7 +73,7 @@
         (5am:is-false start)))))
 
 (5am:def-test redis-rate-limit-store-applies-expiry-when-configured ()
-  (multiple-value-bind (command-fn _records expiries)
+  (multiple-value-bind (records expiries)
       (make-rate-limit-fake-redis)
     (declare (ignore _records))
     (let ((store (make-instance 'io.github.cl-sdk.wst.rate-limit.redis-store:redis-store
