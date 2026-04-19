@@ -25,6 +25,7 @@
    #:remove-route
    #:add-route
    #:condition-handler
+   #:development-condition-handler
    #:any-route-handler
    #:ok-response
    #:internal-server-error-response

@@ -14,6 +14,8 @@ Main system. Manages the routes used in a application.
 (remove-route 'something)
 
 (condition-handler (lambda (request response err) nil))
+;; or use built-in dev helper:
+(condition-handler #'development-condition-handler)
 
 ;; anything else that is a GET request is handled like this.
 (any-route-handler :GET (lambda (request reponse) nil))

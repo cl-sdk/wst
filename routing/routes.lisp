@@ -62,6 +62,19 @@ when no specific route matches.")
 the default internal server error handler."
   (setf *condition-handler* fn))
 
+(defun development-condition-handler (request response err)
+  "Condition handler tuned for development/debugging.
+
+Prints a detailed error message to `*error-output*` and returns it as the
+500 response content."
+  (let ((message (format nil "condition handled~%method: ~a~%uri: ~a~%type: ~a~%message: ~a"
+                         (request-method request)
+                         (request-uri request)
+                         (type-of err)
+                         err)))
+    (format *error-output* "~&~a~%" message)
+    (internal-server-error-response t response :content message)))
+
 (defun any-route-handler (method fn)
   "Sets a user-defined function FN as the handler for all requests
 matching METHOD when no specific route matches."
