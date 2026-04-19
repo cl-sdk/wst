@@ -22,33 +22,23 @@ command arguments.")
    (window-seconds :initarg :window-seconds
                     :initform nil
                     :reader redis-store-window-seconds)
-   (host :initarg :host :initform #(127 0 0 1) :reader redis-store-host)
-   (port :initarg :port :initform 6379 :reader redis-store-port)
-   (auth :initarg :auth :initform nil :reader redis-store-auth)
-   (ssl :initarg :ssl :initform nil :reader redis-store-ssl)
-   (verify :initarg :verify :initform nil :reader redis-store-verify)
-   (certificate :initarg :certificate :initform nil :reader redis-store-certificate)
-   (ssl-key :initarg :ssl-key :initform nil :reader redis-store-ssl-key)
-   (cipher-list :initarg :cipher-list :initform nil :reader redis-store-cipher-list)
+   (connection :initarg :connection
+               :initform nil
+               :reader redis-store-connection)
    (connection-fn :initarg :connection-fn
                   :initform (lambda (store thunk)
-                              (redis:with-recursive-connection (:host (redis-store-host store)
-                                                                 :port (redis-store-port store)
-                                                                 :auth (redis-store-auth store)
-                                                                 :ssl (redis-store-ssl store)
-                                                                 :verify (redis-store-verify store)
-                                                                 :certificate (redis-store-certificate store)
-                                                                 :key (redis-store-ssl-key store)
-                                                                 :cipher-list (redis-store-cipher-list store))
-                                (funcall thunk)))
+                              (let ((connection (redis-store-connection store)))
+                                (unless connection
+                                  (error "No Redis connection configured. Pass a CL-REDIS connection via :connection when creating the store."))
+                                (let ((redis:*connection* connection))
+                                  (funcall thunk))))
                   :reader redis-store-connection-fn))
   (:documentation "Redis-backed implementation of the rate-limit store protocol.
 
 Slots:
 - KEY-PREFIX: string prefix used to namespace Redis keys.
 - WINDOW-SECONDS: optional TTL set on each saved key via EXPIRE.
-- HOST/PORT/AUTH/SSL/VERIFY/CERTIFICATE/KEY/CIPHER-LIST: Redis connection options.
-- HOST defaults to #(127 0 0 1), matching CL-REDIS defaults; strings like \"127.0.0.1\" are also valid.
+- CONNECTION: CL-REDIS connection object used as REDIS:*CONNECTION*.
 - CONNECTION-FN: function called as (connection-fn store thunk) to execute Redis calls."))
 
 (defun redis-store--with-connection (store thunk)
