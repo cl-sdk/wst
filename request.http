@@ -24,6 +24,13 @@ Content-Type: application/x-www-form-urlencoded
 name=wst&lang=lisp
 
 #
+# Echo (JSON)
+POST :base/api/v1/echo
+Content-Type: application/json
+
+{"name":"wst","lang":"lisp"}
+
+#
 # Cookies parsing
 GET :base/api/v1/cookies
 Cookie: first=one; second=two

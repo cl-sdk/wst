@@ -57,6 +57,11 @@
   (wst.routing.response.dsl:status 200 response)
   (wst.routing.response.dsl:json t "{\"users\":[{\"id\":1,\"name\":\"alice\"}]}" response))
 
+(defmethod wst.request-content:parse-content
+    ((type (eql :|application/json|)) content &optional (encoding :utf-8))
+  (declare (ignore type))
+  (com.inuoe.jzon:parse (wst.request-content:content-as-string content encoding)))
+
 (defun echo-handler (request response)
   (let* ((content-type (or (wst.routing:request-content-type request) "text/plain"))
          (parsed-type (or (car (wst.request-content:parse-content-type content-type))
