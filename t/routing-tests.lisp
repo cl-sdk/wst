@@ -287,6 +287,7 @@
     (5am:is (search "method: GET" content))
     (5am:is (search "uri: /oops" content))
     (5am:is (search "message: something went wrong." content))
+    (5am:is (search "stack trace:" content))
     (wst.routing:remove-route 'dev-condition-route)
     (wst.routing:condition-handler nil)))
 

@@ -62,16 +62,40 @@ when no specific route matches.")
 the default internal server error handler."
   (setf *condition-handler* fn))
 
+(defun %condition-stack-trace (err)
+  (declare (ignorable err))
+  (let* ((sb-debug-package (find-package :sb-debug))
+         (print-backtrace (and sb-debug-package
+                               (find-symbol "PRINT-BACKTRACE" sb-debug-package))))
+    (when (and print-backtrace (fboundp print-backtrace))
+      (or (ignore-errors
+            (with-output-to-string (stream)
+              (let ((*debug-io* stream)
+                    (*error-output* stream)
+                    (*standard-output* stream)
+                    (*trace-output* stream))
+                (funcall print-backtrace))))
+          (ignore-errors
+            (with-output-to-string (stream)
+              (funcall print-backtrace :stream stream)))
+          (ignore-errors
+            (with-output-to-string (stream)
+              (funcall print-backtrace nil :stream stream)))))))
+
 (defun development-condition-handler (request response err)
   "Condition handler tuned for development/debugging.
 
 Prints a detailed error message to `*error-output*` and returns it as the
 500 response content."
-  (let ((message (format nil "condition handled~%method: ~a~%uri: ~a~%type: ~a~%message: ~a"
-                         (request-method request)
-                         (request-uri request)
-                         (type-of err)
-                         err)))
+  (let* ((stack-trace (%condition-stack-trace err))
+         (message (format nil "condition handled~%=================~%method: ~a~%uri: ~a~%type: ~a~%message: ~a~%~%stack trace:~%~a"
+                          (request-method request)
+                          (request-uri request)
+                          (type-of err)
+                          err
+                          (if (and stack-trace (> (length stack-trace) 0))
+                              stack-trace
+                              "not available on this lisp implementation"))))
     (format *error-output* "~&~a~%" message)
     (internal-server-error-response t response :content message)))
 
