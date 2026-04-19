@@ -52,6 +52,18 @@
 (defun generate-session-id ()
   (generate-random-token))
 
+(defun secure-string= (a b)
+  (if (and (stringp a) (stringp b))
+      (let* ((len-a (length a))
+             (len-b (length b))
+             (max-len (max len-a len-b))
+             (acc (logxor len-a len-b)))
+        (dotimes (i max-len (zerop acc))
+          (let ((char-a (if (< i len-a) (char-code (aref a i)) 0))
+                (char-b (if (< i len-b) (char-code (aref b i)) 0)))
+            (setf acc (logior acc (logxor char-a char-b))))))
+      nil))
+
 (defmethod wst.session.csrf:session-csrf-token ((obj example-session-csrf-store) &key session-id &allow-other-keys)
   (gethash session-id (store-tokens obj)))
 
@@ -63,7 +75,7 @@
 
 (defmethod wst.session.csrf:verify-session-csrf-token ((obj example-session-csrf-store) key &key session-id &allow-other-keys)
   (let ((stored (wst.session.csrf:session-csrf-token obj :session-id session-id)))
-    (and stored key (string= stored key))))
+    (and stored key (secure-string= stored key))))
 
 (defun request-session-id (request)
   (let* ((cookies (wst.cookies:parse-cookies (wst.routing:request-headers request)))
