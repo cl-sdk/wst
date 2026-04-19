@@ -84,12 +84,23 @@ the default internal server error handler."
 Prints a detailed error message to `*error-output*` and returns it as the
 500 response content."
   (let* ((stack-trace (%condition-stack-trace err))
-         (message (format nil "condition handled~%=================~%method: ~a~%uri: ~a~%type: ~a~%message: ~a~%~%stack trace:~%~a"
+         (message-template
+           (concatenate 'string
+                        "condition handled~%"
+                        "=================~%"
+                        "method: ~a~%"
+                        "uri: ~a~%"
+                        "type: ~a~%"
+                        "message: ~a~%"
+                        "~%"
+                        "stack trace:~%"
+                        "~a"))
+         (message (format nil message-template
                           (request-method request)
                           (request-uri request)
                           (type-of err)
                           err
-                          (if (and stack-trace (plusp (length stack-trace)))
+                          (if (and stack-trace (not (string= stack-trace "")))
                               stack-trace
                               "stack trace not available on this Lisp implementation"))))
     (format *error-output* "~&~a~%" message)
