@@ -2,6 +2,7 @@
                 :wst.routing.dsl
                 :wst.routing.response.dsl
                 :wst.routing.woo
+                :wst.session.csrf
                 :wst.request-content
                 :wst.request-content.routing
                 :wst.cookies
@@ -24,6 +25,55 @@
 
 (defparameter *parse-content-middleware*
   (wst.request-content.routing:parse-request-content))
+
+(defclass csrf-store ()
+  ((tokens
+    :initform (make-hash-table :test 'equal)
+    :accessor csrf-store-tokens)))
+
+(defparameter *csrf-store* (make-instance 'csrf-store))
+
+(defun request-client-id (request)
+  (or (gethash "x-forwarded-for" (wst.routing:request-headers request))
+      "global"))
+
+(defun generate-csrf-token ()
+  (format nil "~36R~36R"
+          (random most-positive-fixnum)
+          (get-universal-time)))
+
+(defmethod wst.session.csrf:session-csrf-token ((store csrf-store) &key client-id)
+  (gethash client-id (csrf-store-tokens store)))
+
+(defmethod wst.session.csrf:add-session-csrf-token ((store csrf-store) key &key client-id)
+  (setf (gethash client-id (csrf-store-tokens store)) key))
+
+(defmethod wst.session.csrf:remove-session-csrf-token ((store csrf-store) &key client-id)
+  (remhash client-id (csrf-store-tokens store)))
+
+(defmethod wst.session.csrf:verify-session-csrf-token ((store csrf-store) key &key client-id)
+  (let ((current (wst.session.csrf:session-csrf-token store :client-id client-id)))
+    (and current (string= current key))))
+
+(defun csrf-token-handler (request response)
+  (let* ((client-id (request-client-id request))
+         (token (generate-csrf-token)))
+    (wst.session.csrf:add-session-csrf-token *csrf-store* token :client-id client-id)
+    (wst.routing:ok-response t response
+                             :headers (list :x-csrf-token token)
+                             :content token)))
+
+(defun csrf-before (request response)
+  (let ((method (wst.routing:request-method request)))
+    (if (member method '(:POST :PUT :PATCH :DELETE))
+        (let ((token (gethash "x-csrf-token" (wst.routing:request-headers request))))
+          (if (wst.session.csrf:verify-session-csrf-token
+               *csrf-store*
+               token
+               :client-id (request-client-id request))
+              (cons :continue response)
+              (cons :halt (wst.routing:forbidden-response t response :content "invalid csrf token"))))
+        (cons :continue response))))
 
 (defun rate-limit-before (request response)
   (multiple-value-bind (allowed-p retry-after)
@@ -103,13 +153,14 @@
         (wst.routing.dsl:route :GET health "/health" health-handler)
         (wst.routing.dsl:route :GET boom "/boom" boom-handler)
         (wst.routing.dsl:resource "/api/v1"
-                                 (wst.routing.dsl:route :GET users "/users" users-handler)
-                                 (wst.routing.dsl:wrap
-                                  :before ,*parse-content-middleware*
-                                  :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
-                                 (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
-       (wst.routing.dsl:wrap
-        :before (,cb-before rate-limit-before)
+                                  (wst.routing.dsl:route :GET users "/users" users-handler)
+                                  (wst.routing.dsl:route :GET csrf "/csrf" csrf-token-handler)
+                                  (wst.routing.dsl:wrap
+                                   :before (,*parse-content-middleware* csrf-before)
+                                   :route (wst.routing.dsl:route :POST echo "/echo" echo-handler))
+                                  (wst.routing.dsl:route :GET cookies "/cookies" cookies-handler))
+        (wst.routing.dsl:wrap
+         :before (,cb-before rate-limit-before)
         :after (,cb-after)
         :route (wst.routing.dsl:route :GET flaky "/api/v1/flaky" flaky-handler))
        (wst.routing.dsl:any-route :GET not-found-handler)))))

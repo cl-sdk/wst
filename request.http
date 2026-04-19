@@ -17,9 +17,15 @@ GET :base/health
 GET :base/api/v1/users
 
 #
+# Issue CSRF token for subsequent unsafe requests.
+GET :base/api/v1/csrf
+
+#
 # Echo (form-urlencoded)
+# Copy X-CSRF-Token from the previous response into this request header.
 POST :base/api/v1/echo
 Content-Type: application/x-www-form-urlencoded
+X-CSRF-Token: replace-with-token-from-csrf-endpoint
 
 name=wst&lang=lisp
 
@@ -27,6 +33,7 @@ name=wst&lang=lisp
 # Echo (JSON)
 POST :base/api/v1/echo
 Content-Type: application/json
+X-CSRF-Token: replace-with-token-from-csrf-endpoint
 
 {"name":"wst","lang":"lisp"}
 
