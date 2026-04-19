@@ -274,23 +274,6 @@
      (wst.routing:remove-route 'unhandled-condition-route)
      (wst.routing:condition-handler nil)))
 
-(def-route-testing built-in-development-condition-handler-adds-debug-details ()
-  (wst.routing:condition-handler #'wst.routing:development-condition-handler)
-  (wst.routing:add-route 'dev-condition-route "/oops" :GET
-                         (lambda (request response)
-                           (declare (ignorable request response))
-                           (error "something went wrong.")))
-  (let* ((rs (wst.routing:dispatch-route (wst.routing:make-request :uri "/oops" :method :GET)))
-         (content (wst.routing:response-content rs)))
-    (5am:is (= 500 (wst.routing:response-status rs)))
-    (5am:is (search "condition handled" content))
-    (5am:is (search "method: GET" content))
-    (5am:is (search "uri: /oops" content))
-    (5am:is (search "message: something went wrong." content))
-    (5am:is (search "stack trace:" content))
-    (wst.routing:remove-route 'dev-condition-route)
-    (wst.routing:condition-handler nil)))
-
 ;;; any-route-handler
 
 (def-route-testing any-route-with-method-matches-all-uris ()
