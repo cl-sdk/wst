@@ -233,10 +233,10 @@
   #-sbcl
   (error "Restarting a running server is only supported on SBCL."))
 
-(defun start (&key (port 3000))
+(defun start-server (&key (port 3000))
   (with-server-control-lock
     (when *server-running-p*
-      (error "The example app is already running. Use (restart) to restart it."))
+      (error "The example app is already running. Use (restart-server) to restart it."))
     (setf *server-port* port
           *restart-requested-p* nil))
   (loop
@@ -258,7 +258,7 @@
       (return))
     (format t "~&Restarting example app...~%")))
 
-(defun restart (&key (port *server-port*))
+(defun restart-server (&key (port *server-port*))
   (multiple-value-bind (running-p target-port)
       (with-server-control-lock
         (setf *server-port* port)
@@ -269,6 +269,6 @@
             (values nil *server-port*)))
     (if running-p
         (request-graceful-stop)
-        (start :port target-port))))
+        (start-server :port target-port))))
 
-(start)
+(start-server)
