@@ -1,6 +1,6 @@
-# Restclient requests for examples/woo-application.lisp
+# Restclient requests for examples/url-shortener/main.lisp
 # Start the app first:
-#   sbcl --load examples/woo-application.lisp
+#   sbcl --load examples/url-shortener/main.lisp
 
 # restclient variable syntax
 :base = http://localhost:3000
@@ -13,63 +13,45 @@ GET :base/
 GET :base/health
 
 #
-# Users (JSON)
-GET :base/api/v1/users
-
-#
-# Issue CSRF token for subsequent unsafe requests.
-# Copy both Set-Cookie and X-CSRF-Token values into the POST requests below.
-GET :base/api/v1/csrf
-
-#
-# CSRF check (protected POST)
-# Copy both values from GET /api/v1/csrf.
-POST :base/api/v1/csrf/check
-X-CSRF-Token: replace-with-token-from-csrf-endpoint
-Cookie: wst-example-session-id=replace-with-session-id-from-set-cookie
-
-#
-# Echo (form-urlencoded)
-POST :base/api/v1/echo
+# Create short URL (form-urlencoded)
+POST :base/api/v1/links
 Content-Type: application/x-www-form-urlencoded
 
-name=wst&lang=lisp
+url=https://example.com/docs/wst
 
 #
-# Echo (JSON)
-POST :base/api/v1/echo
+# Create short URL (JSON)
+POST :base/api/v1/links
 Content-Type: application/json
 
-{"name":"wst","lang":"lisp"}
+{"url":"https://common-lisp.net"}
 
 #
-# Cookies parsing
-GET :base/api/v1/cookies
-Cookie: first=one; second=two
+# List all short URLs
+GET :base/api/v1/links
+
+#
+# Inspect one short URL by code
+# Replace `1` with an existing code from the create response.
+GET :base/api/v1/links/1
+
+#
+# Resolve short URL by code (redirect)
+# Replace `1` with an existing code.
+GET :base/1
+
+#
+# Delete one short URL by code
+# Replace `1` with an existing code.
+DELETE :base/api/v1/links/1
+
+#
+# Invalid create request (missing url)
+POST :base/api/v1/links
+Content-Type: application/json
+
+{"target":"https://example.com"}
 
 #
 # Fallback any-route
 GET :base/does-not-exist
-
-#
-# Rate-limit demo (X-Forwarded-For is used as the limiter key)
-# Run this request several times quickly to get 429.
-GET :base/api/v1/flaky
-X-Forwarded-For: 198.51.100.10
-
-#
-# Condition-handler demo:
-# This route raises a condition and is rendered by the app condition handler.
-GET :base/boom
-
-#
-# Circuit-breaker demo:
-# Run the first two requests with fail=true to trigger failures, then
-# run the third request to observe the open-circuit response.
-GET :base/api/v1/flaky?fail=true
-
-#
-GET :base/api/v1/flaky?fail=true
-
-#
-GET :base/api/v1/flaky
