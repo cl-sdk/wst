@@ -55,3 +55,52 @@ Content-Type: application/json
 #
 # Fallback any-route
 GET :base/does-not-exist
+
+# ------------------------------------------------------------
+# Restclient requests for examples/bookmark-manager/main.lisp
+# Start the app first in another shell:
+#   sbcl --load examples/bookmark-manager/main.lisp
+#
+# Reuse cookie jar support from your REST client to persist session cookies.
+
+:bookmarks_base = http://localhost:3000
+
+:session_id =
+
+# Index
+GET :bookmarks_base/
+
+# Login (JSON)
+POST :bookmarks_base/api/v1/session/login
+Content-Type: application/json
+
+{"user":"alice"}
+
+# Create bookmark (requires session cookie)
+POST :bookmarks_base/api/v1/bookmarks
+Content-Type: application/x-www-form-urlencoded
+Cookie: wst_session_id=:session_id
+
+title=wst repo&url=https://github.com/cl-sdk/wst
+
+# Create bookmark (JSON)
+POST :bookmarks_base/api/v1/bookmarks
+Content-Type: application/json
+Cookie: wst_session_id=:session_id
+
+{"title":"Common Lisp","url":"https://common-lisp.net"}
+
+# List current user's bookmarks
+GET :bookmarks_base/api/v1/bookmarks
+Cookie: wst_session_id=:session_id
+
+# Delete bookmark by id
+# Replace `1` with an existing id from the list response.
+DELETE :bookmarks_base/api/v1/bookmarks/6
+Cookie: wst_session_id=:session_id
+
+# Logout
+POST :bookmarks_base/api/v1/session/logout
+
+# Unauthorized after logout
+GET :bookmarks_base/api/v1/bookmarks
