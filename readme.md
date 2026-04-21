@@ -147,6 +147,15 @@ All state is held in the circuit breaker struct and passed explicitly to each fu
 (wst.circuit-breaker:circuit-breaker-record cb nil)
 ```
 
+#### examples
+
+Load runnable examples with ASDF:
+
+```lisp
+(ql:quickload :wst.example.url-shortener)
+(ql:quickload :wst.example.bookmark-manager)
+```
+
 # license
 
 Unlicense.
