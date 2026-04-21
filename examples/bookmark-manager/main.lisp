@@ -1,19 +1,7 @@
-(ql:quickload '(:wst.routing
-                :wst.routing.dsl
-                :wst.routing.woo
-                :wst.request-content
-                :wst.request-content.routing
-                :wst.cookies
-                :sqlite
-                :woo))
-
 (defpackage #:wst.example.bookmark-manager
   (:use #:cl))
 
 (in-package #:wst.example.bookmark-manager)
-
-(load #P"./examples/bookmark-manager/utils.lisp")
-(load #P"./examples/bookmark-manager/domain.lisp")
 
 (defparameter *parse-content-middleware*
   (wst.request-content.routing:parse-request-content))

@@ -1,10 +1,3 @@
-(ql:quickload '(:wst.routing
-                :wst.routing.dsl
-                :wst.routing.woo
-                :wst.request-content
-                :wst.request-content.routing
-                :woo))
-
 (defpackage #:wst.example.url-shortener
   (:use #:cl))
 
