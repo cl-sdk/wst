@@ -12,7 +12,8 @@
    #:sqlite-store-connection
    #:sqlite-store-database-path
    #:sqlite-store-table-name
-   #:sqlite-store-max-age-seconds))
+   #:sqlite-store-max-age-seconds
+   #:initialize-sqlite-store))
 
 (in-package #:io.github.cl-sdk.wst.session.sqlite)
 
@@ -99,7 +100,7 @@
 (defun generate-session-id (store)
   (apply #'concatenate (list* 'string (loop for i upto 20 collect (write-to-string (random 10))))))
 
-(defmethod initialize-instance :after ((store sqlite-store) &key)
+(defun initialize-sqlite-store (store)
   (with-store-lock (store)
     (let ((table-name (store-table-name store)))
       (sqlite:execute-non-query

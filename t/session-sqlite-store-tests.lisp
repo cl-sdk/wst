@@ -31,7 +31,9 @@
                                      :data-deserializer #'deserialize-session-data
                                      :max-age-seconds 300)))
      (unwind-protect
-          (progn ,@body)
+          (progn
+            (wst.session.sqlite-store:initialize-sqlite-store ,store-var)
+            ,@body)
        (when (probe-file db-path)
          (delete-file db-path)))))
 
