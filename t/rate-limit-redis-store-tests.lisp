@@ -12,38 +12,38 @@
   (let ((records (make-hash-table :test #'equal))
         (expiries (make-hash-table :test #'equal)))
     (values
-      records
-      expiries)))
+     records
+     expiries)))
 
 (defun ensure-rate-limit-entry (records key)
   (or (gethash key records)
       (setf (gethash key records) (make-hash-table :test #'equal))))
 
 (defmacro with-mocked-rate-limit-redis ((records expiries) &body body)
-  `(let* ((hmget-original (symbol-function 'redis:hmget))
-          (hmset-original (symbol-function 'redis:hmset))
-          (expire-original (symbol-function 'redis:expire))
-          (del-original (symbol-function 'redis:del)))
+  `(let* ((hmget-original (symbol-function 'redis:red-hmget))
+          (hmset-original (symbol-function 'redis:red-hmset))
+          (expire-original (symbol-function 'redis:red-expire))
+          (del-original (symbol-function 'redis:red-del)))
      (unwind-protect
           (progn
-            (setf (symbol-function 'redis:hmget)
+            (setf (symbol-function 'redis:red-hmget)
                   (lambda (key field &rest fields)
                     (let* ((entry (gethash key ,records))
                            (wanted-fields (cons field fields)))
                       (mapcar (lambda (field-name)
                                 (and entry (gethash field-name entry)))
                               wanted-fields)))
-                  (symbol-function 'redis:hmset)
+                  (symbol-function 'redis:red-hmset)
                   (lambda (key &rest fields-and-values)
                     (let ((entry (ensure-rate-limit-entry ,records key)))
                       (loop for (field value) on fields-and-values by #'cddr
                             do (setf (gethash field entry) value)))
                     "OK")
-                  (symbol-function 'redis:expire)
+                  (symbol-function 'redis:red-expire)
                   (lambda (key ttl)
                     (setf (gethash key ,expiries) ttl)
                     t)
-                  (symbol-function 'redis:del)
+                  (symbol-function 'redis:red-del)
                   (lambda (key &rest keys)
                     (let ((removed 0))
                       (dolist (k (cons key keys) removed)
@@ -52,17 +52,17 @@
                         (remhash k ,records)
                         (remhash k ,expiries)))))
             ,@body)
-       (setf (symbol-function 'redis:hmget) hmget-original
-             (symbol-function 'redis:hmset) hmset-original
-             (symbol-function 'redis:expire) expire-original
-             (symbol-function 'redis:del) del-original))))
+       (setf (symbol-function 'redis:red-hmget) hmget-original
+             (symbol-function 'redis:red-hmset) hmset-original
+             (symbol-function 'redis:red-expire) expire-original
+             (symbol-function 'redis:red-del) del-original))))
 
 (5am:def-test redis-rate-limit-store-roundtrip ()
   (multiple-value-bind (records expiries)
       (make-rate-limit-fake-redis)
     (declare (ignore _records _expiries))
     (let ((store (make-instance 'io.github.cl-sdk.wst.rate-limit.redis-store:redis-store
-                                :command-fn command-fn)))
+                                :connection (make-rate-limit-fake-redis))))
       (multiple-value-bind (count start)
           (io.github.cl-sdk.wst.rate-limit.store:fetch-window store :client-a)
         (5am:is-false count)
@@ -83,7 +83,7 @@
       (make-rate-limit-fake-redis)
     (declare (ignore _records))
     (let ((store (make-instance 'io.github.cl-sdk.wst.rate-limit.redis-store:redis-store
-                                :command-fn command-fn
-                                :window-seconds 42)))
+                                :window-seconds 42
+                                :connection (make-rate-limit-fake-redis))))
       (io.github.cl-sdk.wst.rate-limit.store:save-window store :client-b 1 2000)
       (5am:is (= 42 (gethash "wst:rate-limit::CLIENT-B" expiries)))))) ; key uses WRITE-TO-STRING on :CLIENT-B
