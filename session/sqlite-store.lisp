@@ -101,6 +101,10 @@
   (apply #'concatenate (list* 'string (loop for i upto 20 collect (write-to-string (random 10))))))
 
 (defun initialize-sqlite-store (store)
+  "Initializes SQLite schema objects for STORE.
+
+Call this once during server startup, before using STORE for session operations."
+  (check-type store sqlite-store)
   (with-store-lock (store)
     (let ((table-name (store-table-name store)))
       (sqlite:execute-non-query
@@ -150,16 +154,19 @@
                        expires-at))))
         (%session-object-from-row store row)))))
 
-(defmethod io.github.cl-sdk.wst.session:recover-session ((store sqlite-store) session-id &key &allow-other-keys)
+(defun %recover-session (store session-id)
+  (let ((row (find-session-row store session-id)))
+    (when row
+      (make-session-object (row-column row 0)
+                           (deserialize-session-data (row-column row 1))
+                           (row-column row 2)
+                           (row-column row 3)
+                           (row-column row 4)))))
+
+(defmethod wst.session:recover-session ((store sqlite-store) session-id &key &allow-other-keys)
   (with-store-lock (store)
     (cleanup-expired-sessions store)
-    (let ((row (find-session-row store session-id)))
-      (when row
-        (make-session-object (row-column row 0)
-                             (deserialize-session-data (row-column row 1))
-                             (row-column row 2)
-                             (row-column row 3)
-                             (row-column row 4))))))
+    (%recover-session store session-id)))
 
 (defmethod io.github.cl-sdk.wst.session:update-session ((store sqlite-store) session &key &allow-other-keys)
   (with-store-lock (store)
