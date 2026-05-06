@@ -53,10 +53,11 @@ jobs:
           echo .qlot/bin >> $GITHUB_PATH
         if: steps.cache.outputs.cache-hit == 'true'
 
-      - uses: 40ants/setup-lisp@v2
+      - uses: 40ants/setup-lisp@v4
         if: steps.cache.outputs.cache-hit != 'true'
 
       - name: run
         run: |
           ros use sbcl
+          qlot install
           LISP="ros run --" make tests 2> /dev/null
