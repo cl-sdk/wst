@@ -1,7 +1,7 @@
 ENV?=development
 
 ## run through roswell
-LISP?=sbcl
+LISP?=sbcl --sysinit ./.sbclrc
 
 LISPFLAGS=--non-interactive
 

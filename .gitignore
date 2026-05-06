@@ -1,3 +1,7 @@
 coverage/*
 system-index.txt
-.DS_Store
+.DS_Store/
+.qlot/
+.quicklisp
+.sbclrc
+

@@ -24,19 +24,42 @@
             ];
 
             shellHook = ''
+            export INIT_FILE="$PWD/.sbclrc"
             export QUICKLISP_HOME=$PWD/.quicklisp
 
+            if [ ! -d ".sbclrc" ]; then
+               echo "Creating local sbcl resource file."
+               touch $INIT_FILE
+            fi
+
+
             if [ ! -d "$QUICKLISP_HOME" ]; then
-              echo "Installing Quicklisp locally..."
+              cat <<EOF > $INIT_FILE
+#-quicklisp
+(let ((quicklisp-init #P"$QUICKLISP_HOME/setup.lisp"))
+  (when (probe-file quicklisp-init)
+      (load quicklisp-init)))
+
+#+quicklisp
+(push #P"$PWD" ql:*local-project-directories*)
+EOF
+
+              echo "Installing Quicklisp..."
               sbcl --non-interactive \
                 --load ${quicklisp} \
                 --eval "(quicklisp-quickstart:install :path \"$QUICKLISP_HOME\")" \
-                --eval "(ql:add-to-init-file)" \
                 --quit
+
+              echo "Installing qlot..."
+              sbcl --non-interactive \
+                --sysinit "$INIT_FILE" \
+                --eval "(ql:quickload :qlot)" \
+                --eval "(qlot:init \"$PWD\")" \
+                --eval "(qlot:install)"
+
             fi
 
-            echo "SBCL + Quicklisp ready"
-            echo "Run: sbcl"
+            echo "SBCL + Quicklisp + qlot"
           '';
           };
         });
