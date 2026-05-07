@@ -57,7 +57,5 @@ Behavior:
           (setf (wst.routing:request-content request) content)
           (cons :continue response))
       (error (err)
-        (wst.routing:bad-request-response
-         t response
-         :content (format nil "invalid request content: ~a" err))
+        (wst.routing:bad-request-response t response)
         (cons :halt response)))))
