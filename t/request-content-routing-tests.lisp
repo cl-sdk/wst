@@ -51,8 +51,6 @@
       (5am:is (= 0 calls))
       (5am:is (= 400 (io.github.cl-sdk.wst.routing:response-status response))))))
 
-(5am:run! 'request-content-middleware-uses-configured-default-content-type)
-
 (def-route-testing request-content-middleware-uses-configured-default-content-type ()
   (let ((middleware (io.github.cl-sdk.wst.request-content.routing:parse-request-content
                      :default-content-type "application/x-www-form-urlencoded"))
