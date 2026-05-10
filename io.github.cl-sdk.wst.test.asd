@@ -2,7 +2,7 @@
   :description "FiveAM test suite for io.github.cl-sdk.wst.routing, io.github.cl-sdk.wst.routing.dsl, io.github.cl-sdk.wst.routing.woo, and io.github.cl-sdk.wst.routing.response.dsl."
   :author "Bruno Dias"
   :license "Unlicense"
-  :version "0.0.1"
+  :version "0.1.0"
   :depends-on (#:alexandria
                #:str
                #:serapeum

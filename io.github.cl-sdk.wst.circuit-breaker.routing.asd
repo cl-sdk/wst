@@ -2,7 +2,7 @@
   :description "HTTP adapter bridging wst.circuit-breaker and wst.routing middleware."
   :author "Bruno Dias"
   :license "Unlicense"
-  :version "0.0.1"
+  :version "0.1.0"
   :depends-on (#:io.github.cl-sdk.wst.circuit-breaker
                #:io.github.cl-sdk.wst.routing)
   :pathname "circuit-breaker"

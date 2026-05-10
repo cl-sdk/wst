@@ -2,7 +2,7 @@
   :description "Macro helper for registering GET routes that serve static files."
   :author "Bruno Dias"
   :license "Unlicense"
-  :version "0.0.1"
+  :version "0.1.0"
   :serial t
   :pathname "static"
   :depends-on (#:io.github.cl-sdk.wst.routing)
