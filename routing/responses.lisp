@@ -1,4 +1,4 @@
-(in-package :wst.routing)
+(in-package :io.github.cl-sdk.wst.routing)
 
 (defun write-response (response
                        &key

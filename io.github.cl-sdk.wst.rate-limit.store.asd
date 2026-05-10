@@ -1,4 +1,4 @@
-(asdf:defsystem #:wst.rate-limit.store
+(asdf:defsystem #:io.github.cl-sdk.wst.rate-limit.store
   :description "Storage backend protocol for wst.rate-limit tracking (fetch/save/delete window)."
   :author "Bruno Dias"
   :license "Unlicense"

@@ -1,10 +1,10 @@
-(defpackage #:wst.routing.static
+(defpackage #:io.github.cl-sdk.wst.routing.static
   (:use #:cl)
   (:export
    #:change-static-path
    #:route-static))
 
-(in-package :wst.routing.static)
+(in-package :io.github.cl-sdk.wst.routing.static)
 
 (defparameter *static-path* *default-pathname-defaults*
   "Pathname specifying the directory where all static files are located.")

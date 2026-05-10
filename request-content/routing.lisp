@@ -1,5 +1,5 @@
-(defpackage #:wst.request-content.routing
-  (:use #:cl)
+(defpackage #:io.github.cl-sdk.wst.request-content.routing
+  (:use #:cl #:io.github.cl-sdk.wst.request-content)
   (:documentation "HTTP routing middleware adapter for wst.request-content.
 
 Provides a WRAP :before middleware constructor that parses request content
@@ -8,7 +8,7 @@ using `wst.request-content:parse-content` and stores the parsed value in
   (:export
    #:parse-request-content))
 
-(in-package #:wst.request-content.routing)
+(in-package #:io.github.cl-sdk.wst.request-content.routing)
 
 (defun %charset->encoding (charset default-encoding)
   (cond
@@ -21,12 +21,12 @@ using `wst.request-content:parse-content` and stores the parsed value in
     (t default-encoding)))
 
 (defun %default-parsed-type (content-type default-content-type)
-  (let ((fallback (or (car (wst.request-content:parse-content-type default-content-type))
+  (let ((fallback (or (car (parse-content-type default-content-type))
                       (cons :|text/plain| nil))))
     (if (or (null content-type)
             (string= (string-trim '(#\Space #\Tab) content-type) ""))
         fallback
-        (or (car (wst.request-content:parse-content-type content-type))
+        (or (car (parse-content-type content-type))
             fallback))))
 
 (defun parse-request-content (&key
@@ -45,17 +45,18 @@ Behavior:
   (check-type default-content-type string)
   (lambda (request response)
     (handler-case
-        (let* ((content-type (wst.routing:request-content-type request))
+        (let* ((content-type (io.github.cl-sdk.wst.routing:request-content-type request))
                (parsed-type (%default-parsed-type content-type default-content-type))
                (mime (car parsed-type))
                (options (cdr parsed-type))
                (charset (cdr (assoc "charset" options :test #'string=)))
                (encoding (%charset->encoding charset default-encoding))
-               (content (wst.request-content:parse-content mime
-                                                           (wst.routing:request-content request)
-                                                           encoding)))
-          (setf (wst.routing:request-content request) content)
+               (content (parse-content mime
+                                       (io.github.cl-sdk.wst.routing:request-content request)
+                                       encoding)))
+          (setf (io.github.cl-sdk.wst.routing:request-content request) content)
           (cons :continue response))
       (error (err)
-        (wst.routing:bad-request-response t response)
+        (declare (ignorable err))
+        (io.github.cl-sdk.wst.routing:bad-request-response t response)
         (cons :halt response)))))

@@ -1,4 +1,4 @@
-(in-package :wst.routing.test)
+(in-package :io.github.cl-sdk.wst.test)
 
 ;;;
 ;;; wst.routing.woo suite
@@ -16,11 +16,11 @@
                     :content-type "text/html"
                     :content-length 42
                     :raw-body nil))
-         (req (wst.routing.woo:request-from-woo-env env)))
-    (5am:is (string-equal "/users/1" (wst.routing:request-uri req)))
-    (5am:is (string-equal "foo=bar" (wst.routing:request-query req)))
-    (5am:is (eql :GET (wst.routing:request-method req)))
-    (5am:is (= 42 (wst.routing:request-content-length req)))))
+         (req (io.github.cl-sdk.wst.routing.woo:request-from-woo-env env)))
+    (5am:is (string-equal "/users/1" (io.github.cl-sdk.wst.routing:request-uri req)))
+    (5am:is (string-equal "foo=bar" (io.github.cl-sdk.wst.routing:request-query req)))
+    (5am:is (eql :GET (io.github.cl-sdk.wst.routing:request-method req)))
+    (5am:is (= 42 (io.github.cl-sdk.wst.routing:request-content-length req)))))
 
 (5am:def-test request-from-woo-env-stores-original-env ()
   (let* ((env (list :request-uri "/"
@@ -29,16 +29,16 @@
                     :content-type nil
                     :content-length 0
                     :raw-body nil))
-         (req (wst.routing.woo:request-from-woo-env env)))
-    (5am:is-true (getf (wst.routing:request-data req) :env))
-    (5am:is (eq env (getf (wst.routing:request-data req) :env)))))
+         (req (io.github.cl-sdk.wst.routing.woo:request-from-woo-env env)))
+    (5am:is-true (getf (io.github.cl-sdk.wst.routing:request-data req) :env))
+    (5am:is (eq env (getf (io.github.cl-sdk.wst.routing:request-data req) :env)))))
 
 (5am:def-test response-to-woo-response-returns-correct-format ()
-  (let* ((rs (wst.routing:make-response)))
-    (setf (wst.routing:response-status rs) 200
-          (wst.routing:response-headers rs) (list :content-type "text/plain")
-          (wst.routing:response-content rs) "hello")
-    (let ((woo-rs (wst.routing.woo:response-to-woo-response rs)))
+  (let* ((rs (io.github.cl-sdk.wst.routing:make-response)))
+    (setf (io.github.cl-sdk.wst.routing:response-status rs) 200
+          (io.github.cl-sdk.wst.routing:response-headers rs) (list :content-type "text/plain")
+          (io.github.cl-sdk.wst.routing:response-content rs) "hello")
+    (let ((woo-rs (io.github.cl-sdk.wst.routing.woo:response-to-woo-response rs)))
       (5am:is (= 200 (first woo-rs)))
       (5am:is (equal (list :content-type "text/plain") (second woo-rs)))
       (5am:is (equal (list "hello") (third woo-rs))))))

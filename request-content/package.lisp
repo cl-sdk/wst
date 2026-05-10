@@ -1,4 +1,4 @@
-(defpackage #:wst.request-content
+(defpackage #:io.github.cl-sdk.wst.request-content
   (:use #:cl)
   (:import-from #:str
                 #:split)
@@ -9,7 +9,7 @@
    #:content-as-string
    #:parse-content))
 
-(in-package :wst.request-content)
+(in-package :io.github.cl-sdk.wst.request-content)
 
 (defun %unquote-string (s)
   "If S is a quoted-string per RFC 7230, strip the surrounding DQUOTE delimiters

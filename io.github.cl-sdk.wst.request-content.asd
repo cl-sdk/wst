@@ -1,4 +1,4 @@
-(asdf:defsystem #:wst.request-content
+(asdf:defsystem #:io.github.cl-sdk.wst.request-content
   :description "Stateless Content-Type header parsing and content dispatch for wst web applications."
   :author "Bruno Dias"
   :license "Unlicense"

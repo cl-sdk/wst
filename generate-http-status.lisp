@@ -2,12 +2,12 @@
 
 (with-open-file (output (merge-pathnames "./http/package.lisp" (uiop:getcwd)) :direction :output :if-exists :supersede :if-does-not-exist :create)
   (with-open-file (file (merge-pathnames "data/http_statuses.csv" (uiop:getcwd)))
-    (let ((header '(defpackage #:wst.http
+    (let ((header '(defpackage #:io.github.cl-sdk.wst.http
                     (:use #:cl))))
       (write header :stream output))
     (write-char #\NEWLINE output)
     (write-char #\NEWLINE output)
-    (let ((inpkg '(in-package :wst.http)))
+    (let ((inpkg '(in-package :io.github.cl-sdk.wst.http)))
       (write inpkg :stream output))
     (write-char #\NEWLINE output)
     (write-char #\NEWLINE output)

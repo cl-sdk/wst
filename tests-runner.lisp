@@ -3,7 +3,7 @@
 
 (push *default-pathname-defaults* ql:*local-project-directories*)
 
-(asdf:oos 'asdf:load-op :wst.routing.test :force t)
+(asdf:oos 'asdf:load-op :io.github.cl-sdk.wst.test :force t)
 
 (defun run-tests (coverage)
   (5am:run-all-tests)

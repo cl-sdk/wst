@@ -1,4 +1,4 @@
-(asdf:defsystem #:wst.cookies
+(asdf:defsystem #:io.github.cl-sdk.wst.cookies
   :description "HTTP cookie parsing helpers backed by cl-cookie."
   :author "Bruno Dias"
   :license "Unlicense"

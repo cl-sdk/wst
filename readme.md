@@ -4,7 +4,7 @@ Tools to help you build a web application in Common Lisp.
 
 ### available systems
 
-#### wst.routing
+#### io.github.cl-sdk.wst.routing
 
 Main system. Manages the routes used in a application.
 
@@ -24,11 +24,11 @@ Main system. Manages the routes used in a application.
 ;; => "/something/1"
 ```
 
-#### wst.cookies
+#### io.github.cl-sdk.wst.cookies
 
 HTTP cookie parsing helpers.
 
-#### wst.routing.dsl
+#### io.github.cl-sdk.wst.routing.dsl
 
 A DSL to build filters and middlewares.
 
@@ -87,46 +87,46 @@ This will build a list of routes in the following form.
                           release-request-connection)>
 ```
 
-#### wst.circuit-breaker.routing
+#### io.github.cl-sdk.wst.circuit-breaker.routing
 
-HTTP adapter that bridges `wst.circuit-breaker` with `wst.routing.dsl` middleware.
+HTTP adapter that bridges `io.github.cl-sdk.wst.circuit-breaker` with `io.github.cl-sdk.wst.routing.dsl` middleware.
 Create a circuit breaker middleware pair and apply it with `wrap`:
 
 ```lisp
 (defparameter cb
-  (wst.circuit-breaker.routing:circuit-breaker
+  (io.github.cl-sdk.wst.circuit-breaker.routing:circuit-breaker
    :failure-threshold 3
    :recovery-timeout 30))
 
-(wst.routing.dsl:build-webserver
- `(wst.routing.dsl:wrap
+(io.github.cl-sdk.wst.routing.dsl:build-webserver
+ `(io.github.cl-sdk.wst.routing.dsl:wrap
    :before ,(getf cb :before)
    :after ,(getf cb :after)
-   :route (wst.routing.dsl:route :GET health "/health"
+   :route (io.github.cl-sdk.wst.routing.dsl:route :GET health "/health"
                                  (lambda (request response)
                                    (declare (ignore request))
-                                   (wst.routing:ok-response t response :content "ok")))))
+                                   (io.github.cl-sdk.wst.routing:ok-response t response :content "ok")))))
 ```
 
-#### wst.request-content.routing
+#### io.github.cl-sdk.wst.request-content.routing
 
 Middleware adapter that parses request bodies and stores the parsed value in
 `request-content`.
 
 ```lisp
 (defparameter parse-content-middleware
-  (wst.request-content.routing:parse-request-content))
+  (io.github.cl-sdk.wst.request-content.routing:parse-request-content))
 
-(wst.routing.dsl:build-webserver
- `(wst.routing.dsl:wrap
+(io.github.cl-sdk.wst.routing.dsl:build-webserver
+ `(io.github.cl-sdk.wst.routing.dsl:wrap
    :before ,parse-content-middleware
-   :route (wst.routing.dsl:route :POST create-user "/users"
+   :route (io.github.cl-sdk.wst.routing.dsl:route :POST create-user "/users"
                                   (lambda (request response)
-                                    (let ((body (wst.routing:request-content request)))
-                                      (wst.routing:ok-response t response :content (format nil "~a" body)))))))
+                                    (let ((body (io.github.cl-sdk.wst.routing:request-content request)))
+                                      (io.github.cl-sdk.wst.routing:ok-response t response :content (format nil "~a" body)))))))
 ```
 
-#### wst.circuit-breaker
+#### io.github.cl-sdk.wst.circuit-breaker
 
 A pure circuit breaker state machine with no HTTP dependencies.
 All state is held in the circuit breaker struct and passed explicitly to each function.
@@ -134,17 +134,17 @@ All state is held in the circuit breaker struct and passed explicitly to each fu
 ```lisp
 ;; Create and drive the state machine directly (no HTTP required).
 (defparameter cb
-  (wst.circuit-breaker:make-circuit-breaker
+  (io.github.cl-sdk.wst.circuit-breaker:make-circuit-breaker
    :failure-threshold 3
    :recovery-timeout 30))
 
 ;; Before a call: check if it should proceed.
-(wst.circuit-breaker:circuit-breaker-check cb)
+(io.github.cl-sdk.wst.circuit-breaker:circuit-breaker-check cb)
 ;; => :allowed  (circuit is closed or half-open)
 ;; => :blocked  (circuit is open)
 
 ;; After a call: record its outcome (T = failed, NIL = succeeded).
-(wst.circuit-breaker:circuit-breaker-record cb nil)
+(io.github.cl-sdk.wst.circuit-breaker:circuit-breaker-record cb nil)
 ```
 
 #### examples
@@ -152,8 +152,8 @@ All state is held in the circuit breaker struct and passed explicitly to each fu
 Load runnable examples with ASDF:
 
 ```lisp
-(ql:quickload :wst.example.url-shortener)
-(ql:quickload :wst.example.bookmark-manager)
+(ql:quickload :io.github.cl-sdk.wst.example.url-shortener)
+(ql:quickload :io.github.cl-sdk.wst.example.bookmark-manager)
 ```
 
 # license

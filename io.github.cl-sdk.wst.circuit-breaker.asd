@@ -1,4 +1,4 @@
-(asdf:defsystem #:wst.circuit-breaker
+(asdf:defsystem #:io.github.cl-sdk.wst.circuit-breaker
   :description "Pure circuit breaker state machine with no HTTP dependencies."
   :author "Bruno Dias"
   :license "Unlicense"

@@ -1,5 +1,5 @@
-(defpackage #:wst.routing.response.dsl
-  (:use #:cl)
+(defpackage #:io.github.cl-sdk.wst.routing.response.dsl
+  (:use #:cl #:io.github.cl-sdk.wst.routing)
   (:export
    #:status
    #:headers
@@ -7,7 +7,7 @@
    #:html
    #:json))
 
-(in-package :wst.routing.response.dsl)
+(in-package :io.github.cl-sdk.wst.routing.response.dsl)
 
 (defun headers (new-headers response)
   "Adds or updates HTTP headers in RESPONSE with NEW-HEADERS.
@@ -16,10 +16,10 @@
 - RESPONSE: The response object whose headers are being modified.
 
 Updates RESPONSE by merging NEW-HEADERS into its existing headers, then returns RESPONSE."
-  (let ((headers (wst.routing:response-headers response)))
+  (let ((headers (response-headers response)))
     (loop :for (key value) :on new-headers :by #'cddr
           :do (setf (getf headers key) value))
-    (setf (wst.routing:response-headers response) headers)
+    (setf (response-headers response) headers)
     response))
 
 (defun status (status response)
@@ -29,12 +29,12 @@ Updates RESPONSE by merging NEW-HEADERS into its existing headers, then returns 
 - RESPONSE: The response object to update.
 
 Updates RESPONSE with the given STATUS and returns the modified RESPONSE."
-  (setf (wst.routing:response-status response) status)
+  (setf (response-status response) status)
   response)
 
 (defun set-content-and-headers-for-content-type (content content-type response)
   (headers (list :content-type content-type) response)
-  (setf (wst.routing:response-content response)
+  (setf (response-content response)
         content)
   response)
 
