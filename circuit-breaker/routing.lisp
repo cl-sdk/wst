@@ -72,9 +72,7 @@ Circuit state transitions are handled by WST.CIRCUIT-BREAKER."
        (if (eq (circuit-breaker-check cb) :blocked)
            (progn
              (setf blocked t)
-             (io.github.cl-sdk.wst.routing:write-response response
-                                                          :status open-status
-                                                          :content open-content)
+             (io.github.cl-sdk.wst.routing:write-response response open-status nil open-content)
              (cons :halt response))
            (progn
              (setf blocked nil)

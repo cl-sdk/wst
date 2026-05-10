@@ -417,10 +417,12 @@
 
 (defmethod io.github.cl-sdk.wst.routing:ok-response ((ty (eql :sexp)) response &key headers content)
   (declare (ignorable headers))
-  (io.github.cl-sdk.wst.routing:write-response response :status 200
-                                       :content-type "application/s-expression"
-                                       :headers headers
-                                       :content (format nil "~a" content)))
+  (io.github.cl-sdk.wst.routing:write-response
+   response
+   200
+   headers
+   (format nil "~a" content)
+   :content-type "application/s-expression"))
 
 (def-route-testing respond-with-custom-ok-response-method ()
   (io.github.cl-sdk.wst.routing:any-route-handler :GET
