@@ -20,7 +20,8 @@
                #:io.github.cl-sdk.wst.routing.response.dsl
                #:io.github.cl-sdk.wst.rate-limit.store
                #:io.github.cl-sdk.wst.rate-limit.memory-store
-               #:io.github.cl-sdk.wst.rate-limit)
+               #:io.github.cl-sdk.wst.rate-limit
+               #:io.github.cl-sdk.wst.cors)
   :pathname "t"
   :serial t
   :components ((:file "package")
@@ -28,6 +29,7 @@
                (:file "routing-dsl-tests")
                (:file "circuit-breaker-tests")
                (:file "rate-limit-tests")
+               (:file "cors-tests")
                (:file "routing-woo-tests")
                (:file "response-dsl-tests")
                (:file "request-content-tests")
