@@ -2,7 +2,7 @@
   :description "HTTP middleware adapter to parse request bodies with wst.request-content."
   :author "Bruno Dias"
   :license "Unlicense"
-  :version "0.0.1"
+  :version "0.1.0"
   :depends-on (#:io.github.cl-sdk.wst.request-content
                #:io.github.cl-sdk.wst.routing)
   :pathname "request-content"
