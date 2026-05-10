@@ -1,4 +1,4 @@
-(in-package :wst.routing)
+(in-package :io.github.cl-sdk.wst.routing)
 
 (defstruct request
   "Structure representing an HTTP request.

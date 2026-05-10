@@ -1,10 +1,10 @@
-(defpackage #:wst.routing.woo
+(defpackage #:io.github.cl-sdk.wst.routing.woo
   (:use #:cl)
   (:export
    #:request-from-woo-env
    #:response-to-woo-response))
 
-(in-package :wst.routing.woo)
+(in-package :io.github.cl-sdk.wst.routing.woo)
 
 (defun request-from-woo-env (env)
   "Constructs a request object from WOO web server environment ENV.
@@ -25,16 +25,16 @@ This function translates the raw environment data from the WOO server into a
 standardized request object suitable for further processing."
 
   (multiple-value-bind (path query hash)
-      (wst.routing:parse-uri (getf env :request-uri))
-    (wst.routing:make-request :uri path
-                              :query query
-                              :hash hash
-                              :headers (getf env :headers)
-                              :method (getf env :request-method)
-                              :content-type (getf env :content-type)
-                              :content-length (or (getf env :content-length) 0)
-                              :content (getf env :raw-body)
-                              :data (list :env env))))
+      (io.github.cl-sdk.wst.routing:parse-uri (getf env :request-uri))
+    (io.github.cl-sdk.wst.routing:make-request :uri path
+                                               :query query
+                                               :hash hash
+                                               :headers (getf env :headers)
+                                               :method (getf env :request-method)
+                                               :content-type (getf env :content-type)
+                                               :content-length (or (getf env :content-length) 0)
+                                               :content (getf env :raw-body)
+                                               :data (list :env env))))
 
 (defun response-to-woo-response (response)
   "Converts a RESPONSE object into the format expected by the WOO web server.
@@ -50,6 +50,6 @@ Returns:
 
 This function adapts the internal RESPONSE structure to the WOO server’s response
 format for sending back to the client."
-  (list (wst.routing:response-status response)
-        (wst.routing:response-headers response)
-        (list (wst.routing:response-content response))))
+  (list (io.github.cl-sdk.wst.routing:response-status response)
+        (io.github.cl-sdk.wst.routing:response-headers response)
+        (list (io.github.cl-sdk.wst.routing:response-content response))))

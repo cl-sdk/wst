@@ -1,5 +1,5 @@
-(defpackage #:wst.circuit-breaker.routing
-  (:use #:cl)
+(defpackage #:io.github.cl-sdk.wst.circuit-breaker.routing
+  (:use #:cl #:io.github.cl-sdk.wst.circuit-breaker)
   (:documentation "HTTP routing middleware adapter for wst.circuit-breaker.
 
 Integrates the circuit breaker state machine with wst.routing.dsl,
@@ -32,7 +32,7 @@ Available constructs:
   (:export
    #:circuit-breaker))
 
-(in-package #:wst.circuit-breaker.routing)
+(in-package #:io.github.cl-sdk.wst.circuit-breaker.routing)
 
 (defun circuit-breaker (&key
                           (failure-threshold 5)
@@ -60,7 +60,7 @@ Parameters:
                      (default: status >= 500).
 
 Circuit state transitions are handled by WST.CIRCUIT-BREAKER."
-  (let ((cb (wst.circuit-breaker:make-circuit-breaker
+  (let ((cb (make-circuit-breaker
              :failure-threshold failure-threshold
              :recovery-timeout recovery-timeout
              :clock clock))
@@ -69,12 +69,12 @@ Circuit state transitions are handled by WST.CIRCUIT-BREAKER."
      :before
      (lambda (request response)
        (declare (ignore request))
-       (if (eq (wst.circuit-breaker:circuit-breaker-check cb) :blocked)
+       (if (eq (circuit-breaker-check cb) :blocked)
            (progn
              (setf blocked t)
-             (wst.routing:write-response response
-                                         :status open-status
-                                         :content open-content)
+             (io.github.cl-sdk.wst.routing:write-response response
+                                                          :status open-status
+                                                          :content open-content)
              (cons :halt response))
            (progn
              (setf blocked nil)
@@ -83,7 +83,7 @@ Circuit state transitions are handled by WST.CIRCUIT-BREAKER."
      (lambda (request response)
        (declare (ignore request))
        (unless blocked
-         (wst.circuit-breaker:circuit-breaker-record
+         (circuit-breaker-record
           cb
-          (funcall failure-p (wst.routing:response-status response))))
+          (funcall failure-p (io.github.cl-sdk.wst.routing:response-status response))))
        response))))

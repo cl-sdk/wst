@@ -1,4 +1,4 @@
-(defpackage #:wst.rate-limit.store
+(defpackage #:io.github.cl-sdk.wst.rate-limit.store
   (:use #:cl)
   (:documentation "Storage backend protocol for wst.rate-limit tracking.
 
@@ -53,7 +53,7 @@ The three operations a backend must implement are:
    #:save-window
    #:delete-window))
 
-(in-package #:wst.rate-limit.store)
+(in-package #:io.github.cl-sdk.wst.rate-limit.store)
 
 (defgeneric fetch-window (store key)
   (:documentation "Retrieves the current window state for KEY from STORE.

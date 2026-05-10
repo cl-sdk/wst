@@ -1,4 +1,4 @@
-(asdf:defsystem #:wst.session.csrf
+(asdf:defsystem #:io.github.cl-sdk.wst.session.csrf
   :description "Generic interface for managing per-session CSRF tokens (add/remove/verify)."
   :author "Bruno Dias"
   :license "Unlicense"

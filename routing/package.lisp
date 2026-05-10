@@ -1,4 +1,4 @@
-(defpackage #:wst.routing
+(defpackage #:io.github.cl-sdk.wst.routing
   (:use #:cl)
   (:import-from #:cl-hash-util
                 #:hash-create
@@ -61,4 +61,4 @@
    #:not-implemented
    #:created-response))
 
-(in-package :wst.routing)
+(in-package :io.github.cl-sdk.wst.routing)

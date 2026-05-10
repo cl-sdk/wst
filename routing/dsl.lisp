@@ -1,4 +1,4 @@
-(defpackage #:wst.routing.dsl
+(defpackage #:io.github.cl-sdk.wst.routing.dsl
   (:use #:cl)
   (:documentation "Routing DSL for building webserver endpoints.
 
@@ -91,13 +91,13 @@ Available constructs:
   (:import-from #:cl-hash-util
                 #:hash
                 #:with-keys)
-  (:import-from #:wst.routing
+  (:import-from #:io.github.cl-sdk.wst.routing
                 #:any-route-handler)
   (:import-from #:alexandria
                 #:ensure-list)
-  (:import-from #:wst.routing
+  (:import-from #:io.github.cl-sdk.wst.routing
                 #:add-route)
-  (:import-from #:wst.routing
+  (:import-from #:io.github.cl-sdk.wst.routing
                 #:remove-route)
   (:import-from #:str
                 #:join)
@@ -109,7 +109,7 @@ Available constructs:
    #:group
    #:resource))
 
-(in-package #:wst.routing.dsl)
+(in-package #:io.github.cl-sdk.wst.routing.dsl)
 
 (defun %handler-executor (handler before-actions after-actions)
   (lambda (request response)

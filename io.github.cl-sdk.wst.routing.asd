@@ -1,4 +1,4 @@
-(asdf:defsystem #:wst.routing
+(asdf:defsystem #:io.github.cl-sdk.wst.routing
   :description "Core route registration, matching, and dispatch for wst web applications."
   :author "Bruno Dias"
   :license "Unlicense"
@@ -9,7 +9,7 @@
                #:flexi-streams
                #:serapeum
                #:com.inuoe.jzon
-               #:wst.cookies)
+               #:io.github.cl-sdk.wst.cookies)
   :pathname "routing"
   :serial t
   :components ((:file "package")

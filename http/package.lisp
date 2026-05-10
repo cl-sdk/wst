@@ -1,7 +1,7 @@
-(DEFPACKAGE #:WST.HTTP
+(DEFPACKAGE #:io.github.cl-sdk.wst.http
   (:USE #:CL))
 
-(IN-PACKAGE :WST.HTTP)
+(IN-PACKAGE :io.github.cl-sdk.wst.http)
 
 (DEFVAR +HTTP-STATUS-100+ 100)
 

@@ -1,4 +1,4 @@
-(defpackage #:wst.session
+(defpackage #:io.github.cl-sdk.wst.session
   (:use #:cl)
   (:export
    #:create-session
@@ -8,7 +8,7 @@
    #:renew-session
    #:terminate-session))
 
-(in-package :wst.session)
+(in-package :io.github.cl-sdk.wst.session)
 
 (defgeneric create-session (object data &key &allow-other-keys)
   (:documentation "Creates a new session in OBJECT using the provided DATA.

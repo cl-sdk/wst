@@ -1,4 +1,4 @@
-(defpackage #:wst.cookies
+(defpackage #:io.github.cl-sdk.wst.cookies
   (:use #:cl)
   (:import-from #:cl-cookie
                 #:make-cookie
@@ -49,7 +49,7 @@
    #:write-set-cookie-header
    #:parse-set-cookie-header))
 
-(in-package :wst.cookies)
+(in-package :io.github.cl-sdk.wst.cookies)
 
 (declaim (ftype (function (string) list)
                 parse-cookies-string))

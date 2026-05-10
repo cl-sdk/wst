@@ -1,4 +1,4 @@
-(defpackage #:wst.circuit-breaker
+(defpackage #:io.github.cl-sdk.wst.circuit-breaker
   (:use #:cl)
   (:documentation "Circuit breaker state machine.
 
@@ -58,7 +58,7 @@ Available constructs:
    #:circuit-breaker-check
    #:circuit-breaker-record))
 
-(in-package #:wst.circuit-breaker)
+(in-package #:io.github.cl-sdk.wst.circuit-breaker)
 
 (defstruct circuit-breaker
   "Stateful circuit breaker.

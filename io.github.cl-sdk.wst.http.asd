@@ -1,4 +1,4 @@
-(asdf:defsystem #:wst.http
+(asdf:defsystem #:io.github.cl-sdk.wst.http
   :description "Machine-readable HTTP status code constants and descriptions (100–511)."
   :author "Bruno Dias"
   :license "Unlicense"

@@ -1,4 +1,4 @@
-(defpackage #:wst.rate-limit
+(defpackage #:io.github.cl-sdk.wst.rate-limit
   (:use #:cl)
   (:documentation "Fixed-window rate limiting.
 
@@ -46,16 +46,16 @@ Provides:
           (if allowed-p
               (format t \"~a requests left in window.\" remaining)
               (format t \"Rate limited. Retry after ~a seconds.\" retry-after))))")
-  (:import-from #:wst.rate-limit.store
+  (:import-from #:io.github.cl-sdk.wst.rate-limit.store
                 #:fetch-window
                 #:save-window
                 #:delete-window)
-  (:import-from #:wst.rate-limit.memory-store
+  (:import-from #:io.github.cl-sdk.wst.rate-limit.memory-store
                 #:memory-store)
   (:export
    #:rate-limit))
 
-(in-package #:wst.rate-limit)
+(in-package #:io.github.cl-sdk.wst.rate-limit)
 
 ;;;
 ;;; Rate limiter

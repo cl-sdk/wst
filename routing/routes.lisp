@@ -1,4 +1,4 @@
-(in-package :wst.routing)
+(in-package :io.github.cl-sdk.wst.routing)
 
 (defstruct route
   "A Route object represents a single endpoint in the web server.
