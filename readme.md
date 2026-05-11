@@ -33,12 +33,10 @@ Example route composition:
 
 #### examples
 
-Load runnable examples with ASDF:
+You can find the examples at:
 
-```lisp
-(ql:quickload :io.github.cl-sdk.wst.example.url-shortener)
-(ql:quickload :io.github.cl-sdk.wst.example.bookmark-manager)
-```
+- [cl-sdk/wst-url-shortener-example](https://github.com/cl-sdk/wst-url-shortener-example)
+- [cl-sdk/wst-bookmark-example](https://github.com/cl-sdk/wst-bookmark-example)
 
 # license
 
