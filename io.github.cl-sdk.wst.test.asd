@@ -67,7 +67,7 @@
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.1.0"
-  :depends-on (#:fiveam
+  :depends-on (#:io.github.cl-sdk.wst.test.support
                #:io.github.cl-sdk.wst.cors)
   :pathname "t"
   :serial t
