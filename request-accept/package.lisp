@@ -7,8 +7,11 @@
 
 (in-package :io.github.cl-sdk.wst.request-accept)
 
+;; Visible ASCII range: "!" (33) to "~" (126), used for quoted-pair validation.
 (defconstant +ascii-printable-start+ 33)
 (defconstant +ascii-printable-end+ 126)
+;; C0 control upper bound used to reject control chars except HTAB.
+(defconstant +ascii-control-end+ 32)
 
 (defun %valid-quoted-pair-char-p (c)
   (or (char= c #\Tab)
@@ -21,18 +24,19 @@
                (char= (char s 0) #\")
                (char= (char s (1- len)) #\"))
       (loop :with i = 1
-            :while (< i (1- len))
+            :with last-index = (1- len)
+            :while (< i last-index)
             :do (let ((c (char s i)))
                   (cond
                     ((char= c #\\)
-                     (when (>= (1+ i) (1- len))
+                     (when (>= (1+ i) last-index)
                        (return-from %valid-quoted-string-p nil))
                      (unless (%valid-quoted-pair-char-p (char s (1+ i)))
                        (return-from %valid-quoted-string-p nil))
                      (incf i 2))
                     ((char= c #\")
                      (return-from %valid-quoted-string-p nil))
-                    ((and (< (char-code c) 32)
+                    ((and (< (char-code c) +ascii-control-end+)
                           (not (char= c #\Tab)))
                      (return-from %valid-quoted-string-p nil))
                     (t
