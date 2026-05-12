@@ -34,7 +34,7 @@ using `wst.request-content:parse-content` and stores the parsed value in
                                 (default-encoding :us-ascii))
   "Create a before-middleware that parses the request body.
 
-Returns a function suitable for `wst.routing.dsl:wrap` :before.
+Returns a function suitable for a `:wrap` route DSL form's :before handler.
 
 Behavior:
 - Reads request content type from `wst.routing:request-content-type`.
