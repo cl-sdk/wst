@@ -2,3 +2,7 @@
  (:class qlot/source/dist:source-dist
   :initargs (:distribution "https://beta.quicklisp.org/dist/quicklisp.txt" :%version :latest)
   :version "2026-01-01"))
+("cl-str" .
+ (:class qlot/source/github:source-github
+  :initargs (:repos "vindarel/cl-str" :ref nil :branch nil :tag "0.22")
+  :version "github-69ef8b4111398ecf530b1303d8644976d1517c53"))
