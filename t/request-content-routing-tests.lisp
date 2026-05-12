@@ -13,9 +13,9 @@
                                                       (io.github.cl-sdk.wst.routing:request-content request))))))
     (io.github.cl-sdk.wst.routing:condition-handler #'io.github.cl-sdk.wst.routing:development-condition-handler)
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
+     `(:wrap
        :before ,middleware
-       :route (io.github.cl-sdk.wst.routing.dsl:route :POST parse-content "/" ,handler)))
+       :route (:route :POST parse-content "/" ,handler)))
     (let ((response (io.github.cl-sdk.wst.routing:dispatch-route
                      (io.github.cl-sdk.wst.routing:make-request
                       :uri "/"
@@ -39,9 +39,9 @@
                     (incf calls))))
     (io.github.cl-sdk.wst.routing:condition-handler #'io.github.cl-sdk.wst.routing:development-condition-handler)
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
+     `(:wrap
        :before ,middleware
-       :route (io.github.cl-sdk.wst.routing.dsl:route :POST fail-content "/" ,handler)))
+       :route (:route :POST fail-content "/" ,handler)))
     (let ((response (io.github.cl-sdk.wst.routing:dispatch-route
                      (io.github.cl-sdk.wst.routing:make-request
                       :uri "/"
@@ -59,9 +59,9 @@
                                                              :content (write-to-string (io.github.cl-sdk.wst.routing:request-content request))))))
     (io.github.cl-sdk.wst.routing:condition-handler #'io.github.cl-sdk.wst.routing:development-condition-handler)
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
+     `(:wrap
        :before ,middleware
-       :route (io.github.cl-sdk.wst.routing.dsl:route :POST default-content-type "/" ,handler)))
+       :route (:route :POST default-content-type "/" ,handler)))
     (let ((response (io.github.cl-sdk.wst.routing:dispatch-route
                      (io.github.cl-sdk.wst.routing:make-request
                       :uri "/"

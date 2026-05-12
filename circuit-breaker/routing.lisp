@@ -41,7 +41,7 @@ Available constructs:
                           (open-content "service unavailable")
                           (clock #'get-universal-time)
                           (failure-p (lambda (status) (>= status 500))))
-  "Create a circuit breaker middleware pair for use with wst.routing.dsl:wrap.
+  "Create a circuit breaker middleware pair for use with a `:wrap` route DSL form.
 
 Returns a plist:
   :BEFORE => function suitable for WRAP :BEFORE

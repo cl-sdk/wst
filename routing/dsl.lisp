@@ -8,7 +8,7 @@ Available constructs:
     Define a single route.
 
     Syntax:
-      (route REQUEST-METHOD ROUTE-NAME ROUTE-URI-OR-HANDLER &rest HANDLER)
+      (:route REQUEST-METHOD ROUTE-NAME ROUTE-URI-OR-HANDLER &rest HANDLER)
 
     - REQUEST-METHOD        – HTTP method keyword (e.g., :get, :post).
     - ROUTE-NAME            – Symbol identifying the route.
@@ -28,9 +28,9 @@ Available constructs:
     Group multiple routes into a single unit.
 
     Syntax:
-      (group &rest ROUTES)
+      (:group &rest ROUTES)
 
-    - ROUTES – A sequence of route forms (e.g., route, resource, wrap, any-route).
+    - ROUTES – A sequence of route forms (e.g., :route, :resource, :wrap, :any-route).
 
     Behavior:
       Groups routes together without altering paths or handlers.
@@ -41,7 +41,7 @@ Available constructs:
     Define a resource scope with a common URI prefix and nested routes.
 
     Syntax:
-      (resource ROUTE-URI &rest ROUTES)
+      (:resource ROUTE-URI &rest ROUTES)
 
     - ROUTE-URI – A string appended to the current URI segments.
     - ROUTES    – Nested route definitions inside this resource.
@@ -56,7 +56,7 @@ Available constructs:
     Wrap a route or group of routes with before/after middleware.
 
     Syntax:
-      (wrap :before BEFORE-FNS :after AFTER-FNS :route ROUTE)
+      (:wrap :before BEFORE-FNS :after AFTER-FNS :route ROUTE)
 
     - :before – A list of functions to run before the ROUTE.
     - :after  – A list of functions to run after the ROUTE.
@@ -67,9 +67,9 @@ Available constructs:
       building ROUTE, then restores the stack.
 
     Example:
-      (wrap :before (list fn1 fn2)
-            :after  (list fn4 fn3)
-            :route  route)
+      (:wrap :before (list fn1 fn2)
+             :after  (list fn4 fn3)
+             :route  route)
 
     Execution order:
       fn1 → fn2 → route → fn4 → fn3.
@@ -79,7 +79,7 @@ Available constructs:
     Define a fallback handler executed when no other route matches.
 
     Syntax:
-      (any-route REQUEST-METHOD HANDLER)
+      (:any-route REQUEST-METHOD HANDLER)
 
     - REQUEST-METHOD – HTTP method keyword (e.g., :get, :post).
     - HANDLER        – A function accepting REQUEST and RESPONSE.
@@ -102,12 +102,7 @@ Available constructs:
   (:import-from #:str
                 #:join)
   (:export
-   #:build-webserver
-   #:wrap
-   #:any-route
-   #:route
-   #:group
-   #:resource))
+   #:build-webserver))
 
 (in-package #:io.github.cl-sdk.wst.routing.dsl)
 
@@ -218,9 +213,9 @@ Behavior:
     after processing the route or routing group.
 
 Example:
-  (wrap :before (list fn1 fn2)
-        :after  (list fn4 fn3)
-        :route  route)
+  (:wrap :before (list fn1 fn2)
+         :after  (list fn4 fn3)
+         :route  route)
 
 Execution order in this example:
   fn1 → fn2 → route → fn3 → fn4"
@@ -239,11 +234,11 @@ Execution order in this example:
 Arguments:
   API   – A list beginning with a keyword indicating the type of routing
           construct, followed by its arguments:
-            • (wrap ...)     – Wrap a route or group with before/after handlers.
-            • (any-route ...) – Define a generic route from method and handlers.
-            • (route ...)     – Define a named route with path and handler.
-            • (group ...)     – Group multiple API definitions together.
-            • (resource PATH ...) – Define a resource, extending the current
+            • (:wrap ...)     – Wrap a route or group with before/after handlers.
+            • (:any-route ...) – Define a generic route from method and handlers.
+            • (:route ...)     – Define a named route with path and handler.
+            • (:group ...)     – Group multiple API definitions together.
+            • (:resource PATH ...) – Define a resource, extending the current
               URI segments with PATH, and containing nested routes or groups.
   STACK – A structure carrying accumulated context for building routes, such as
           pre-handlers, post-handlers, and URI segments.
@@ -251,22 +246,22 @@ Arguments:
 Behavior:
   - Dispatches to the appropriate builder function depending on the first
     element of the API definition:
-      • wrap      → `%wrap-routes`
-      • any-route → `%any-route`
-      • route     → `%create-route`
-      • group     → Recursively builds each child API definition.
-      • resource  → Temporarily extends the \"uri-segments\" in STACK with
+      • :wrap      → `%wrap-routes`
+      • :any-route → `%any-route`
+      • :route     → `%create-route`
+      • :group     → Recursively builds each child API definition.
+      • :resource  → Temporarily extends the \"uri-segments\" in STACK with
                     the given PATH, builds the nested definitions, and then
                     restores the previous segments.
   - Constructs the complete routing tree by combining these definitions."
   (let ((item (car api))
         (routes (cdr api)))
     (case item
-      (wrap (%wrap-routes routes stack))
-      (any-route (%any-route routes stack))
-      (route (%create-route routes stack))
-      (group (map nil (lambda (api) (%build-webserver api stack)) routes))
-      (resource (destructuring-bind (path &rest rest)
+      (:wrap (%wrap-routes routes stack))
+      (:any-route (%any-route routes stack))
+      (:route (%create-route routes stack))
+      (:group (map nil (lambda (api) (%build-webserver api stack)) routes))
+      (:resource (destructuring-bind (path &rest rest)
                     (cdr api)
                   (setf (gethash "uri-segments" stack)
                         (append (gethash "uri-segments" stack) (list path)))

@@ -15,7 +15,7 @@
 
 (def-route-testing build-a-simple-route-using-the-dsl ()
   (io.github.cl-sdk.wst.routing.dsl:build-webserver
-   `(io.github.cl-sdk.wst.routing.dsl:route :GET index "/" route-responder))
+   `(:route :GET index "/" route-responder))
   (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET)))
 
 (def-route-testing build-with-just-route-is-the-same-as-plain-route ()
@@ -24,8 +24,8 @@
                     (declare (ignore req res))
                     (setf count (1+ count)))))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
-       :route (io.github.cl-sdk.wst.routing.dsl:route :GET index "/" ,handler)))
+     `(:wrap
+       :route (:route :GET index "/" ,handler)))
     (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET))
     (5am:is (= 1 count))))
 
@@ -39,9 +39,9 @@
                     (declare (ignore req res))
                     (setf count (1+ count)))))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
+     `(:wrap
        :before ,before-action
-       :route (io.github.cl-sdk.wst.routing.dsl:route :GET index "/" ,handler)))
+       :route (:route :GET index "/" ,handler)))
     (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET))
     (5am:is (= 2 count))))
 
@@ -54,8 +54,8 @@
                     (declare (ignore req res))
                     (setf count (1+ count)))))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
-       :route (io.github.cl-sdk.wst.routing.dsl:route :GET index "/" ,handler)
+     `(:wrap
+       :route (:route :GET index "/" ,handler)
        :after ,after-action))
     (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET))
     (5am:is (= 2 count))))
@@ -67,9 +67,9 @@
                        (setf count (1+ count))
                        (cons :continue res))))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
+     `(:wrap
        :before ,middleware
-       :route (io.github.cl-sdk.wst.routing.dsl:route :GET index "/" ,middleware)
+       :route (:route :GET index "/" ,middleware)
        :after ,middleware))
     (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET))
     (5am:is (= 3 count))))
@@ -96,10 +96,10 @@
                     (setf (io.github.cl-sdk.wst.routing:response-status res) 500)
                     res)))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
+     `(:wrap
        :before ,before
        :after ,after
-       :route (io.github.cl-sdk.wst.routing.dsl:route :GET index "/" ,handler)))
+       :route (:route :GET index "/" ,handler)))
     (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET))
     (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET))
     (let ((blocked-a (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET)))
@@ -126,10 +126,10 @@
                     (setf (io.github.cl-sdk.wst.routing:response-status res) (if should-fail 500 200))
                     res)))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
+     `(:wrap
        :before ,before
        :after ,after
-       :route (io.github.cl-sdk.wst.routing.dsl:route :GET index "/" ,handler)))
+       :route (:route :GET index "/" ,handler)))
     (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET))
     (let ((blocked (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'index (io.github.cl-sdk.wst.routing:make-request :method :GET))))
       (5am:is (= 503 (io.github.cl-sdk.wst.routing:response-status blocked))))
@@ -152,9 +152,9 @@
                     (declare (ignore req res))
                     (setf count (1+ count)))))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:group
-       (io.github.cl-sdk.wst.routing.dsl:route :GET route-a "/a" ,handler)
-       (io.github.cl-sdk.wst.routing.dsl:route :GET route-b "/b" ,handler)))
+     `(:group
+       (:route :GET route-a "/a" ,handler)
+       (:route :GET route-b "/b" ,handler)))
     (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'route-a (io.github.cl-sdk.wst.routing:make-request :method :GET))
     (io.github.cl-sdk.wst.routing:dispatch-route-by-name 'route-b (io.github.cl-sdk.wst.routing:make-request :method :GET))
     (5am:is (= 2 count))))
@@ -165,9 +165,9 @@
                     (declare (ignore req res))
                     (setf count (1+ count)))))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:resource "/base"
-                                (io.github.cl-sdk.wst.routing.dsl:route :GET route-a "/a" ,handler)
-                                (io.github.cl-sdk.wst.routing.dsl:route :GET route-b ,handler)))
+     `(:resource "/base"
+                                (:route :GET route-a "/a" ,handler)
+                                (:route :GET route-b ,handler)))
     (io.github.cl-sdk.wst.routing:dispatch-route (io.github.cl-sdk.wst.routing:make-request :uri "/base/a" :method :GET))
     (io.github.cl-sdk.wst.routing:dispatch-route (io.github.cl-sdk.wst.routing:make-request :uri "/base" :method :GET))
     (5am:is (= 2 count))))
@@ -178,17 +178,17 @@
                     (declare (ignore req res))
                     (setf count (1+ count)))))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:any-route :GET ,handler))
+     `(:any-route :GET ,handler))
     (io.github.cl-sdk.wst.routing:dispatch-route (io.github.cl-sdk.wst.routing:make-request :uri "/anything" :method :GET))
     (5am:is (= 1 count))))
 
 (def-route-testing build-route-with-custom-metadata ()
   (let* ((handler (lambda (req res) (declare (ignore req)) res)))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:group
-       (io.github.cl-sdk.wst.routing.dsl:route :GET route-a "/" ,handler :custom :ok)
-       (io.github.cl-sdk.wst.routing.dsl:resource "/a"
-                                 (io.github.cl-sdk.wst.routing.dsl:route :GET route-b ,handler :custom :ok))))
+     `(:group
+       (:route :GET route-a "/" ,handler :custom :ok)
+       (:resource "/a"
+                                 (:route :GET route-b ,handler :custom :ok))))
     (5am:is-true (equal :ok (car (io.github.cl-sdk.wst.routing::route-custom
                                   (io.github.cl-sdk.wst.routing:find-route-by-name 'route-a)))))
     (5am:is-true (equal :ok (car (io.github.cl-sdk.wst.routing::route-custom
@@ -215,9 +215,9 @@
                     (io.github.cl-sdk.wst.routing:ok-response t res :content "ok")
                     res)))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
-     `(io.github.cl-sdk.wst.routing.dsl:wrap
+     `(:wrap
        :before ,middleware
-       :route (io.github.cl-sdk.wst.routing.dsl:route :GET throttled "/" ,handler)))
+       :route (:route :GET throttled "/" ,handler)))
     (let ((first  (io.github.cl-sdk.wst.routing:dispatch-route (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET)))
           (second (io.github.cl-sdk.wst.routing:dispatch-route (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))))
       (5am:is (= 200 (io.github.cl-sdk.wst.routing:response-status first)))

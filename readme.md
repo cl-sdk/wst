@@ -23,12 +23,12 @@ Example route composition:
 
 ```lisp
 (defparameter api
-  `(wrap
+  `(:wrap
     :before (list acquire-request-connection manage-session)
     :after (list http-response-cookies->set-cookie release-request-connection)
-    :route (resource "/api/v1"
-                     (route :POST api-sign-up "/sign-up" api-sign-up-controller)
-                     (route :POST api-log-in "/log-in" api-log-in-controller))))
+    :route (:resource "/api/v1"
+                      (:route :POST api-sign-up "/sign-up" api-sign-up-controller)
+                      (:route :POST api-log-in "/log-in" api-log-in-controller))))
 ```
 
 #### examples
