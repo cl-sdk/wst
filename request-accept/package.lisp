@@ -10,8 +10,8 @@
 ;; Visible ASCII range: "!" (33) to "~" (126), used for quoted-pair validation.
 (defconstant +ascii-printable-start+ 33)
 (defconstant +ascii-printable-end+ 126)
-;; C0 control upper bound used to reject control chars except HTAB.
-(defconstant +ascii-control-end+ 32)
+;; C0 control upper bound (US, 31) used to reject control chars except HTAB.
+(defconstant +ascii-control-end+ 31)
 
 (defun %valid-quoted-pair-char-p (c)
   (or (char= c #\Tab)
@@ -36,7 +36,7 @@
                      (incf i 2))
                     ((char= c #\")
                      (return-from %valid-quoted-string-p nil))
-                    ((and (< (char-code c) +ascii-control-end+)
+                    ((and (<= (char-code c) +ascii-control-end+)
                           (not (char= c #\Tab)))
                      (return-from %valid-quoted-string-p nil))
                     (t
@@ -57,7 +57,7 @@
         s)))
 
 (defun %parse-accept-parameters (parameters)
-  "Parse semicolon-delimited Accept parameters into an alist of string pairs."
+  "Parse semicolon-delimited Accept parameters into an alist of string conses."
   (loop :for part :in parameters
         :for trimmed = (string-trim '(#\Space #\Tab) part)
         :unless (string= trimmed "")
@@ -77,8 +77,9 @@
 
 Returns a list of (MEDIA-RANGE-KEYWORD . PARAMETERS-ALIST) pairs.
 MEDIA-RANGE-KEYWORD is interned in the keyword package and lowercased
-\(e.g. :|text/html|, :|application/json|, :|*/*|). PARAMETERS-ALIST is
-an alist of (\"name\" . \"value\") strings."
+  \(e.g. :|text/html|, :|application/json|, :|*/*|). PARAMETERS-ALIST is
+ an alist of (\"name\" . \"value\") string conses; valueless parameters use
+ an empty string as value."
   (check-type accept-header string)
   (unless (string= (string-trim '(#\Space #\Tab) accept-header) "")
     (loop :for entry :in (split "," accept-header)
