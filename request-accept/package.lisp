@@ -7,12 +7,39 @@
 
 (in-package :io.github.cl-sdk.wst.request-accept)
 
+(defun %valid-quoted-pair-char-p (c)
+  (or (char= c #\Tab)
+      (char= c #\Space)
+      (<= 33 (char-code c) 126)))
+
+(defun %valid-quoted-string-p (s)
+  (let ((len (length s)))
+    (when (and (>= len 2)
+               (char= (char s 0) #\")
+               (char= (char s (1- len)) #\"))
+      (loop :with i = 1
+            :while (< i (1- len))
+            :do (let ((c (char s i)))
+                  (cond
+                    ((char= c #\\)
+                     (when (>= (1+ i) (1- len))
+                       (return-from %valid-quoted-string-p nil))
+                     (unless (%valid-quoted-pair-char-p (char s (1+ i)))
+                       (return-from %valid-quoted-string-p nil))
+                     (incf i 2))
+                    ((char= c #\")
+                     (return-from %valid-quoted-string-p nil))
+                    ((and (< (char-code c) 32)
+                          (not (char= c #\Tab)))
+                     (return-from %valid-quoted-string-p nil))
+                    (t
+                     (incf i)))))
+            :finally (return t))))
+
 (defun %unquote-string (s)
   "If S is a quoted-string, strip surrounding DQUOTE and unescape backslash escapes."
   (let ((len (length s)))
-    (if (and (>= len 2)
-             (char= (char s 0) #\")
-             (char= (char s (1- len)) #\"))
+    (if (%valid-quoted-string-p s)
         (with-output-to-string (out)
           (loop :with i = 1
                 :while (< i (1- len))
@@ -46,7 +73,7 @@ MEDIA-RANGE-KEYWORD is interned in the keyword package and lowercased
 \(e.g. :|text/html|, :|application/json|, :|*/*|). PARAMETERS-ALIST is
 an alist of (\"name\" . \"value\") strings."
   (check-type accept-header string)
-  (when (not (string= (string-trim '(#\Space #\Tab) accept-header) ""))
+  (unless (string= (string-trim '(#\Space #\Tab) accept-header) "")
     (loop :for entry :in (split "," accept-header)
           :for trimmed-entry = (string-trim '(#\Space #\Tab) entry)
           :unless (string= trimmed-entry "")
