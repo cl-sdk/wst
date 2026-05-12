@@ -11,4 +11,5 @@
                #:io.github.cl-sdk.wst.routing.woo.test
                #:io.github.cl-sdk.wst.routing.response.dsl.test
                #:io.github.cl-sdk.wst.request-content.test
-               #:io.github.cl-sdk.wst.request-content.routing.test))
+               #:io.github.cl-sdk.wst.request-content.routing.test
+               #:io.github.cl-sdk.wst.request-accept.test))

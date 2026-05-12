@@ -1,0 +1,56 @@
+(defpackage #:io.github.cl-sdk.wst.request-accept
+  (:use #:cl)
+  (:import-from #:str
+                #:split)
+  (:export
+   #:parse-request-accept))
+
+(in-package :io.github.cl-sdk.wst.request-accept)
+
+(defun %unquote-string (s)
+  "If S is a quoted-string, strip surrounding DQUOTE and unescape backslash escapes."
+  (let ((len (length s)))
+    (if (and (>= len 2)
+             (char= (char s 0) #\")
+             (char= (char s (1- len)) #\"))
+        (with-output-to-string (out)
+          (loop :with i = 1
+                :while (< i (1- len))
+                :do (let ((c (char s i)))
+                      (if (and (char= c #\\) (< (1+ i) (1- len)))
+                          (progn (write-char (char s (1+ i)) out) (incf i 2))
+                          (progn (write-char c out) (incf i))))))
+        s)))
+
+(defun %parse-accept-parameters (parameters)
+  "Parse semicolon-delimited Accept parameters into an alist of string pairs."
+  (loop :for part :in parameters
+        :for trimmed = (string-trim '(#\Space #\Tab) part)
+        :unless (string= trimmed "")
+          :collect (let ((equal-position (position #\= trimmed)))
+                     (if equal-position
+                         (let* ((name (string-downcase
+                                       (string-trim '(#\Space #\Tab)
+                                                    (subseq trimmed 0 equal-position))))
+                                (value (%unquote-string
+                                        (string-trim '(#\Space #\Tab)
+                                                     (subseq trimmed (1+ equal-position))))))
+                           (cons name value))
+                         (cons (string-downcase trimmed) "")))))
+
+(defun parse-request-accept (accept-header)
+  "Parse an HTTP Accept header into media-range entries.
+
+Returns a list of (MEDIA-RANGE-KEYWORD . PARAMETERS-ALIST) pairs.
+MEDIA-RANGE-KEYWORD is interned in the keyword package and lowercased
+\(e.g. :|text/html|, :|application/json|, :|*/*|). PARAMETERS-ALIST is
+an alist of (\"name\" . \"value\") strings."
+  (check-type accept-header string)
+  (when (not (string= (string-trim '(#\Space #\Tab) accept-header) ""))
+    (loop :for entry :in (split "," accept-header)
+          :for trimmed-entry = (string-trim '(#\Space #\Tab) entry)
+          :unless (string= trimmed-entry "")
+            :collect (let* ((sections (split ";" trimmed-entry))
+                            (media-range (string-trim '(#\Space #\Tab) (car sections)))
+                            (params (%parse-accept-parameters (cdr sections))))
+                       (cons (intern (string-downcase media-range) :keyword) params)))))
