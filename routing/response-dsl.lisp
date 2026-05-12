@@ -4,6 +4,7 @@
    #:status
    #:headers
    #:header
+   #:location
    #:text
    #:html
    #:json))
@@ -37,6 +38,16 @@ Updates RESPONSE by adding NEW-HEADER into its existing headers, then returns RE
       (setf (response-headers response) headers)
       response)))
 
+(defun location (location response)
+  "Adds HTTP headers in RESPONSE with NEW-HEADERS.
+
+- LOCATION: A URL location.
+- RESPONSE: The response object whose headers are being modified.
+
+Updates RESPONSE by adding LOCATION into its existing headers, then returns RESPONSE.
+
+Call `location` only once since it's doesn't check if already included."
+  (header (list :location location) response))
 
 (defun status (status response)
   "Sets the HTTP status code of RESPONSE.

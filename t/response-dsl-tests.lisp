@@ -41,6 +41,21 @@
          (returned (io.github.cl-sdk.wst.routing.response.dsl:headers (list :x-custom "yes") target)))
     (5am:is (eq target returned))))
 
+;;; location
+
+(5am:def-test set-location-header ()
+  (let ((target (io.github.cl-sdk.wst.routing:make-response)))
+    (io.github.cl-sdk.wst.routing.response.dsl:location "https://example.com" target)
+    (5am:is-true (string-equal (getf (io.github.cl-sdk.wst.routing:response-headers target) :location)
+                               "https://example.com"))))
+
+(5am:def-test replace-setting-a-location-header ()
+  (let ((target (io.github.cl-sdk.wst.routing:make-response)))
+    (io.github.cl-sdk.wst.routing.response.dsl:location "https://example1.com" target)
+    (io.github.cl-sdk.wst.routing.response.dsl:location "https://example2.com" target)
+    (5am:is-true (string-equal (getf (io.github.cl-sdk.wst.routing:response-headers target) :location)
+                               "https://example2.com"))))
+
 ;;; status
 
 (5am:def-test set-status-updates-response-status-code ()
