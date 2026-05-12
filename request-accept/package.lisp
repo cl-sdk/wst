@@ -7,10 +7,13 @@
 
 (in-package :io.github.cl-sdk.wst.request-accept)
 
+(defconstant +ascii-printable-start+ 33)
+(defconstant +ascii-printable-end+ 126)
+
 (defun %valid-quoted-pair-char-p (c)
   (or (char= c #\Tab)
       (char= c #\Space)
-      (<= 33 (char-code c) 126)))
+      (<= +ascii-printable-start+ (char-code c) +ascii-printable-end+)))
 
 (defun %valid-quoted-string-p (s)
   (let ((len (length s)))
@@ -44,7 +47,7 @@
           (loop :with i = 1
                 :while (< i (1- len))
                 :do (let ((c (char s i)))
-                      (if (and (char= c #\\) (< (1+ i) (1- len)))
+                      (if (char= c #\\)
                           (progn (write-char (char s (1+ i)) out) (incf i 2))
                           (progn (write-char c out) (incf i))))))
         s)))
