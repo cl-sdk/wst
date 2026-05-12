@@ -248,14 +248,20 @@ Returns a route object if found."
 (defun %dispatcher (route request response)
   "The dispatcher for any kind of dispatch.
  ROUTE-DATA is a pair of a route and the params and a request object."
-  (handler-case
-      (let* ((fn (route-dispatcher (or route
+  (labels ((default-internal-server-error-response (response)
+             (setf (response-status response) 500
+                   (response-headers response) (append (response-headers response)
+                                                       (list :content-type "text/plain"))
+                   (response-content response) "internal server error")
+             response))
+   (handler-case
+       (let* ((fn (route-dispatcher (or route
                                        *not-fount-route*)))
-             (rs (funcall fn request response)))
-        rs)
-    (t (err)
-      (or (and *condition-handler* (funcall *condition-handler* request response err))
-          (funcall #'default-internal-server-error-response response)))))
+              (rs (funcall fn request response)))
+         rs)
+     (t (err)
+       (or (and *condition-handler* (funcall *condition-handler* request response err))
+          (funcall #'default-internal-server-error-response response))))))
 
 (defun dispatch-route (request)
   "Dispatches a route for the given REQUEST based on its PATH and METHOD.
