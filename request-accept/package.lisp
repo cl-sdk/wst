@@ -78,8 +78,8 @@
 Returns a list of (MEDIA-RANGE-KEYWORD . PARAMETERS-ALIST) pairs.
 MEDIA-RANGE-KEYWORD is interned in the keyword package and lowercased
   \(e.g. :|text/html|, :|application/json|, :|*/*|). PARAMETERS-ALIST is
- an alist of (\"name\" . \"value\") string conses; valueless parameters use
- an empty string as value."
+  an alist of (\"name\" . \"value\") string conses; valueless parameters use
+  an empty string as value."
   (check-type accept-header string)
   (unless (string= (string-trim '(#\Space #\Tab) accept-header) "")
     (loop :for entry :in (split "," accept-header)
