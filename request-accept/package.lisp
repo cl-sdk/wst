@@ -41,7 +41,7 @@
                      (return-from %valid-quoted-string-p nil))
                     (t
                      (incf i)))))
-            :finally (return t))))
+            :finally (return-from %valid-quoted-string-p t))))
 
 (defun %unquote-string (s)
   "If S is a quoted-string, strip surrounding DQUOTE and unescape backslash escapes."
