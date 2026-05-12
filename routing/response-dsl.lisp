@@ -3,6 +3,7 @@
   (:export
    #:status
    #:headers
+   #:header
    #:text
    #:html
    #:json))
@@ -21,6 +22,21 @@ Updates RESPONSE by merging NEW-HEADERS into its existing headers, then returns 
           :do (setf (getf headers key) value))
     (setf (response-headers response) headers)
     response))
+
+(defun header (new-header response)
+  "Adds or updates HTTP headers in RESPONSE with NEW-HEADERS.
+
+- NEW-HEADER: A key-value pair to add or update.
+- RESPONSE: The response object whose headers are being modified.
+
+Updates RESPONSE by adding NEW-HEADER into its existing headers, then returns RESPONSE."
+  (destructuring-bind (key value)
+      new-header
+    (let ((headers (response-headers response)))
+      (setf (getf headers key) value)
+      (setf (response-headers response) headers)
+      response)))
+
 
 (defun status (status response)
   "Sets the HTTP status code of RESPONSE.

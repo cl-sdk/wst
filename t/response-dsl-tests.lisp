@@ -18,9 +18,16 @@
 
 (5am:def-test set-a-single-header ()
   (let ((target (io.github.cl-sdk.wst.routing:make-response)))
-    (io.github.cl-sdk.wst.routing.response.dsl:headers (list :content-type "mimetype") target)
+    (io.github.cl-sdk.wst.routing.response.dsl:header (list :content-type "mimetype") target)
     (5am:is-true (string-equal (getf (io.github.cl-sdk.wst.routing:response-headers target) :content-type)
                                "mimetype"))))
+
+(5am:def-test replace-setting-a-single-header ()
+  (let ((target (io.github.cl-sdk.wst.routing:make-response)))
+    (io.github.cl-sdk.wst.routing.response.dsl:header (list :content-type "mimetype1") target)
+    (io.github.cl-sdk.wst.routing.response.dsl:header (list :content-type "mimetype2") target)
+    (5am:is-true (string-equal (getf (io.github.cl-sdk.wst.routing:response-headers target) :content-type)
+                               "mimetype2"))))
 
 (5am:def-test setting-headers-replaces-existing-values ()
   (let ((target (io.github.cl-sdk.wst.routing:make-response)))
