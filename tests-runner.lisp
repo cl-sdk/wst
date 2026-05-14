@@ -6,9 +6,9 @@
 (asdf:oos 'asdf:load-op :io.github.cl-sdk.wst.test :force t)
 
 (defun run-tests (coverage)
-  (5am:run-all-tests)
-  (when coverage
-    (sb-cover:report #P"./coverage/")))
+  (prog1 (5am:run-all-tests)
+    (when coverage
+      (sb-cover:report #P"./coverage/"))))
 
 (setf *debugger-hook*
       (lambda (c h)
@@ -17,4 +17,4 @@
       fiveam:*on-error* nil)
 
 (unless (run-tests t)
-  (exit :code 1 :abort t))
+  (exit :code -1 :abort t))
