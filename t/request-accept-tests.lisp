@@ -29,3 +29,21 @@
   (5am:is (equal '((:|text/plain| ("foo" . "")))
                  (io.github.cl-sdk.wst.request-accept:parse-request-accept
                   "text/plain; foo"))))
+
+(5am:def-test find-best-response-accept-picks-supported-wildcard-type ()
+  (5am:is (equal '(:|text/html| ("q" . "1.0"))
+                 (io.github.cl-sdk.wst.request-accept:find-best-response-accept
+                  '(:|application/json| :|text/html|)
+                  '((:|text/*| ("q" . "1.0"))
+                    (:|application/*| ("q" . "0.9")))))))
+
+(5am:def-test find-best-response-accept-falls-back-to-any-response-for-star-star ()
+  (5am:is (equal '(:|application/json| ("q" . "0.8"))
+                 (io.github.cl-sdk.wst.request-accept:find-best-response-accept
+                  '(:|application/json| :|text/html|)
+                  '((:|*/*| ("q" . "0.8")))))))
+
+(5am:def-test find-best-response-accept-returns-nil-when-none-matches ()
+  (5am:is (null (io.github.cl-sdk.wst.request-accept:find-best-response-accept
+                 '(:|application/json|)
+                 '((:|text/html| ("q" . "1.0")))))))
