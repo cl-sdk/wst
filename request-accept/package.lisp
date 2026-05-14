@@ -3,7 +3,10 @@
   (:import-from #:str
                 #:split)
   (:export
-   #:parse-request-accept))
+   #:parse-request-accept
+   #:find-best-response-accept
+   #:respond-with
+   #:respond))
 
 (in-package :io.github.cl-sdk.wst.request-accept)
 
@@ -12,6 +15,44 @@
 (defconstant +ascii-printable-end+ 126)
 ;; C0 control upper bound (US, 31) used to reject control chars except HTAB.
 (defconstant +ascii-control-end+ 31)
+
+(defparameter *default-response-accept* '(:|text/plain| ("q" "1.0")))
+
+(defgeneric respond-with (implementation content request response)
+  (:method ((implementation t) content request response)
+    content))
+
+;; find-best-response-accept :: (list mimetypes) (list (cons mimetype (list (cons attribute-name value)))) -> (cons mimetype (list (cons attribute-name value)))
+(defun find-best-response-accept (response-accepts request-accepts)
+  (labels ((first-response-accepts-for-mimetype (response-accepts media-type)
+             (find-if (lambda (response-accept)
+                        (str:starts-with-p media-type (string response-accept)))
+                      response-accepts)))
+    (let* ((found-request-accept (find-if (lambda (request-accept)
+                                            (let ((mime-type (string (car request-accept))))
+                                              (if (str:containsp "*" mime-type)
+
+                                                  (first-response-accepts-for-mimetype response-accepts
+                                                                                       (car (str:split #\/ mime-type)))
+                                                  (member (car request-accept) response-accepts))))
+                                          request-accepts)))
+      (let ((mime-sub (str:split #\/ (string (car found-request-accept)))))
+        (if (string-equal "*" (cadr mime-sub))
+            (let ((response-accept (find-if (lambda (response-accept)
+                                              (string-equal (car mime-sub)
+                                                            (car (str:split #\/ (string response-accept)))))
+                                            response-accepts)))
+              (cons response-accept (cdr found-request-accept)))
+            found-request-accept)))))
+
+(defun respond (content request response)
+  (io.github.cl-sdk.wst.routing:with-request-data (accept route)
+      request
+    (let* ((request-accept accept)
+           (route-accept (getf (io.github.cl-sdk.wst.routing::route-custom route) :response-accepts))
+           (mime-type (or (find-best-response-accept route-accept request-accept)
+                         *default-response-accept*)))
+      (respond-with (print (car mime-type)) content request response))))
 
 (defun %valid-quoted-pair-char-p (c)
   (or (char= c #\Tab)
@@ -72,6 +113,17 @@
                            (cons name value))
                          (cons (string-downcase trimmed) "")))))
 
+(defun process-request-accepts (request-accepts)
+  (labels ((get-accept-entry-quality-value (entry)
+             (or (find-if (lambda (item) (string-equal (car item) "q"))
+                         entry)
+                '("q" . "1.0"))))
+    (sort request-accepts
+          (lambda (a b)
+            (let* ((qa (get-accept-entry-quality-value (cdr a)))
+                   (qb (get-accept-entry-quality-value (cdr b))))
+              (> (serapeum:parse-float (cdr qa)) (serapeum:parse-float (cdr qb))))))))
+
 (defun parse-request-accept (accept-header)
   "Parse an HTTP Accept header into media-range entries.
 
@@ -82,10 +134,11 @@ MEDIA-RANGE-KEYWORD is interned in the keyword package and lowercased
   an empty string as value."
   (check-type accept-header string)
   (unless (string= (string-trim '(#\Space #\Tab) accept-header) "")
-    (loop :for entry :in (split "," accept-header)
-          :for trimmed-entry = (string-trim '(#\Space #\Tab) entry)
-          :unless (string= trimmed-entry "")
-            :collect (let* ((sections (split ";" trimmed-entry))
-                            (media-range (string-trim '(#\Space #\Tab) (car sections)))
-                            (params (%parse-accept-parameters (cdr sections))))
-                       (cons (intern (string-downcase media-range) :keyword) params)))))
+    (process-request-accepts
+     (loop :for entry :in (split "," accept-header)
+           :for trimmed-entry = (string-trim '(#\Space #\Tab) entry)
+           :unless (string= trimmed-entry "")
+             :collect (let* ((sections (split ";" trimmed-entry))
+                             (media-range (string-trim '(#\Space #\Tab) (car sections)))
+                             (params (%parse-accept-parameters (cdr sections))))
+                        (cons (intern (string-downcase media-range) :keyword) params))))))
