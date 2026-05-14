@@ -67,3 +67,20 @@
   (5am:is (null (io.github.cl-sdk.wst.request-accept:find-best-response-accept
                  '(:|application/json|)
                  '((:|text/html| ("q" . "1.0")))))))
+
+(defmethod io.github.cl-sdk.wst.request-accept:respond-with
+    ((implementation (eql :|text/plain|)) content request response)
+  (io.github.cl-sdk.wst.routing.response.dsl:text content response))
+
+(5am:def-test respond-with-the-appropriate-media ()
+  (let ((req (io.github.cl-sdk.wst.routing:make-request :headers (cl-hash-util:hash ("Accept" "text/plain"))
+                                                        :data (list :route (io.github.cl-sdk.wst.routing::make-route
+                                                                            :name 'a
+                                                                            :path "/"
+                                                                            :custom '(:response-accepts (:|application/json| :|text/csv|)))
+                                                                    :accept (io.github.cl-sdk.wst.request-accept:parse-request-accept "text/plain"))))
+        (res (io.github.cl-sdk.wst.routing:make-response)))
+    (io.github.cl-sdk.wst.request-accept:respond "ok" req res)
+    (5am:is (string-equal "text/plain"
+                          (getf (io.github.cl-sdk.wst.routing:response-headers res) :content-type)))
+    (5am:is (string-equal "ok" (io.github.cl-sdk.wst.routing:response-content res)))))
