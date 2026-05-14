@@ -15,13 +15,17 @@
 (defconstant +ascii-printable-end+ 126)
 ;; C0 control upper bound (US, 31) used to reject control chars except HTAB.
 (defconstant +ascii-control-end+ 31)
+(defconstant +invalid-media-range-specificity+ -1)
 
-(defparameter *default-response-accept* '(:|text/plain| ("q" "1.0")))
+(defparameter *default-response-accept* '(:|text/plain| ("q" . "1.0")))
 
 (defgeneric respond-with (implementation content request response)
-  (:documentation "Render CONTENT according to IMPLEMENTATION (a selected media type).")
+  (:documentation "Render CONTENT according to IMPLEMENTATION (a selected media type).
+
+The default method returns RESPONSE unchanged.")
   (:method ((implementation t) content request response)
-    content))
+    (declare (ignore implementation content request))
+    response))
 
 (defun %find-response-accept-for-type (response-accepts media-type)
   (if (string-equal media-type "*")
@@ -37,10 +41,12 @@
          (media-type (first mime-sub))
          (media-subtype (second mime-sub)))
     (cond
-      ((and (string-equal "*" media-type)
+      ((and media-type media-subtype
+            (string-equal "*" media-type)
             (string-equal "*" media-subtype))
        (car response-accepts))
-      ((string-equal "*" media-subtype)
+      ((and media-subtype
+            (string-equal "*" media-subtype))
        (%find-response-accept-for-type response-accepts media-type))
       (t
        (find (car request-accept) response-accepts :test #'eq)))))
@@ -129,13 +135,33 @@ REQUEST-ACCEPTS must be ordered by preference (for example, output from
 (defun %process-request-accepts (request-accepts)
   (labels ((get-accept-entry-quality-value (entry)
              (or (find-if (lambda (item) (string-equal (car item) "q"))
-                         entry)
-                '("q" . "1.0"))))
+                          entry)
+                 '("q" . "1.0")))
+           (media-range-specificity (entry)
+             (let* ((parts (split "/" (string (car entry))))
+                    (media-type (first parts))
+                    (media-subtype (second parts)))
+               (cond
+                 ((and media-type media-subtype
+                       (string-equal media-type "*")
+                       (string-equal media-subtype "*"))
+                  0)
+                 ((and media-subtype
+                       (string-equal media-subtype "*"))
+                  1)
+                 ((and media-type media-subtype)
+                  2)
+                 (t
+                  +invalid-media-range-specificity+)))))
     (sort request-accepts
           (lambda (a b)
             (let* ((qa (get-accept-entry-quality-value (cdr a)))
-                   (qb (get-accept-entry-quality-value (cdr b))))
-              (> (serapeum:parse-float (cdr qa)) (serapeum:parse-float (cdr qb))))))))
+                   (qb (get-accept-entry-quality-value (cdr b)))
+                   (qa-value (serapeum:parse-float (cdr qa)))
+                   (qb-value (serapeum:parse-float (cdr qb))))
+              (if (= qa-value qb-value)
+                  (> (media-range-specificity a) (media-range-specificity b))
+                  (> qa-value qb-value)))))))
 
 (defun parse-request-accept (accept-header)
   "Parse an HTTP Accept header into media-range entries.

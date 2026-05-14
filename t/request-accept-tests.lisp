@@ -30,12 +30,32 @@
                  (io.github.cl-sdk.wst.request-accept:parse-request-accept
                   "text/plain; foo"))))
 
+(5am:def-test parse-request-accept-prioritizes-specific-on-equal-quality ()
+  (5am:is (equal '((:|application/json| ("q" . "1.0"))
+                   (:|text/*| ("q" . "1.0")))
+                 (io.github.cl-sdk.wst.request-accept:parse-request-accept
+                  "text/*, application/json"))))
+
 (5am:def-test find-best-response-accept-picks-supported-wildcard-type ()
   (5am:is (equal '(:|text/html| ("q" . "1.0"))
                  (io.github.cl-sdk.wst.request-accept:find-best-response-accept
                   '(:|application/json| :|text/html|)
                   '((:|text/*| ("q" . "1.0"))
                     (:|application/*| ("q" . "0.9")))))))
+
+(5am:def-test find-best-response-accept-prefers-specific-media-type ()
+  (5am:is (equal '(:|application/json| ("q" . "1.0"))
+                 (io.github.cl-sdk.wst.request-accept:find-best-response-accept
+                  '(:|application/json| :|text/html|)
+                  (io.github.cl-sdk.wst.request-accept:parse-request-accept
+                   "text/*, application/json")))))
+
+(5am:def-test find-best-response-accept-ignores-malformed-media-range ()
+  (5am:is (equal '(:|application/json| ("q" . "1.0"))
+                 (io.github.cl-sdk.wst.request-accept:find-best-response-accept
+                  '(:|application/json| :|text/html|)
+                  (io.github.cl-sdk.wst.request-accept:parse-request-accept
+                   "text, application/json")))))
 
 (5am:def-test find-best-response-accept-falls-back-to-any-response-for-star-star ()
   (5am:is (equal '(:|application/json| ("q" . "0.8"))
