@@ -114,3 +114,46 @@
     (io.github.cl-sdk.wst.request-accept:respond "new-content" req res)
     (5am:is (equal '(:x-test "1") (io.github.cl-sdk.wst.routing:response-headers res)))
     (5am:is (string= "original" (io.github.cl-sdk.wst.routing:response-content res)))))
+
+;;; RFC 9110 §12.5.1 / RFC 7231 §5.3.2 — q=0 means explicitly not acceptable
+
+(5am:def-test find-best-response-accept-excludes-q-zero-entries ()
+  "q=0 makes a media type explicitly not acceptable (RFC 9110 §12.5.1)."
+  (5am:is (null (io.github.cl-sdk.wst.request-accept:find-best-response-accept
+                 '(:|text/html|)
+                 '((:|text/html| ("q" . "0")))))))
+
+(5am:def-test find-best-response-accept-excludes-explicit-q-zero-from-wildcard-match ()
+  "q=0 on a specific type must exclude it even when a wildcard would otherwise match (RFC 9110 §12.5.1)."
+  (5am:is (equal '(:|application/json| ("q" . "0.8"))
+                 (io.github.cl-sdk.wst.request-accept:find-best-response-accept
+                  '(:|text/html| :|application/json|)
+                  (io.github.cl-sdk.wst.request-accept:parse-request-accept
+                   "text/html;q=0, */*;q=0.8")))))
+
+;;; RFC 9110 §12.4.2 / RFC 7231 §5.3.1 — q value must be within 0.000–1.000
+
+(5am:def-test parse-request-accept-signals-on-q-value-above-one ()
+  "q > 1 is outside the valid range [0.000, 1.000] (RFC 9110 §12.4.2)."
+  (5am:signals error
+    (io.github.cl-sdk.wst.request-accept:parse-request-accept
+     "text/html;q=1.1")))
+
+(5am:def-test parse-request-accept-signals-on-q-with-too-many-decimals ()
+  "q with more than 3 decimal places is malformed (RFC 9110 §12.4.2)."
+  (5am:signals error
+    (io.github.cl-sdk.wst.request-accept:parse-request-accept
+     "text/html;q=0.9999")))
+
+;;; RFC 9110 §12.5.1 — absent Accept header
+
+(5am:def-test parse-request-accept-returns-nil-for-nil-header ()
+  "A missing Accept header (nil) should return nil without signalling (RFC 9110 §12.5.1)."
+  (5am:is (null (io.github.cl-sdk.wst.request-accept:parse-request-accept nil))))
+
+(5am:def-test find-best-response-accept-returns-first-when-accepts-nil ()
+  "An absent Accept header (nil request-accepts) implies the client accepts any media type (RFC 9110 §12.5.1)."
+  (5am:is (equal '(:|application/json| ("q" . "1.0"))
+                 (io.github.cl-sdk.wst.request-accept:find-best-response-accept
+                  '(:|application/json| :|text/html|)
+                  nil))))
