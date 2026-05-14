@@ -3,7 +3,10 @@
   (:import-from #:str
                 #:split)
   (:export
-   #:parse-request-accept))
+   #:parse-request-accept
+   #:find-best-response-accept
+   #:respond-with
+   #:respond))
 
 (in-package :io.github.cl-sdk.wst.request-accept)
 
@@ -12,6 +15,63 @@
 (defconstant +ascii-printable-end+ 126)
 ;; C0 control upper bound (US, 31) used to reject control chars except HTAB.
 (defconstant +ascii-control-end+ 31)
+(defconstant +invalid-media-range-specificity+ -1)
+
+(defparameter *default-response-accept* '(:|text/plain| ("q" . "1.0")))
+
+(defgeneric respond-with (implementation content request response)
+  (:documentation "Render CONTENT according to IMPLEMENTATION (a selected media type).
+
+The default method returns RESPONSE unchanged.")
+  (:method ((implementation t) content request response)
+    (declare (ignore implementation content request))
+    response))
+
+(defun %find-response-accept-for-type (response-accepts media-type)
+  (if (string-equal media-type "*")
+      (car response-accepts)
+      (find-if (lambda (response-accept)
+                 (string-equal media-type
+                               (car (split "/" (string response-accept)))))
+               response-accepts)))
+
+(defun %find-response-accept (response-accepts request-accept)
+  (let* ((mime-type (string (car request-accept)))
+         (mime-sub (split "/" mime-type))
+         (media-type (first mime-sub))
+         (media-subtype (second mime-sub)))
+    (cond
+      ((and media-type media-subtype
+            (string-equal "*" media-type)
+            (string-equal "*" media-subtype))
+       (car response-accepts))
+      ((and media-subtype
+            (string-equal "*" media-subtype))
+       (%find-response-accept-for-type response-accepts media-type))
+      (t
+       (find (car request-accept) response-accepts :test #'eq)))))
+
+(defun find-best-response-accept (response-accepts request-accepts)
+  "Pick the first acceptable response media type supported by RESPONSE-ACCEPTS.
+
+REQUEST-ACCEPTS must be ordered by preference (for example, output from
+`parse-request-accept`). Returns the selected accept entry as a
+\(MEDIA-RANGE-KEYWORD . PARAMETERS-ALIST) pair, or NIL when no match exists."
+  (when (and response-accepts request-accepts)
+    (loop :for request-accept :in request-accepts
+          :for response-accept = (%find-response-accept response-accepts request-accept)
+          :when response-accept
+            :return (cons response-accept (cdr request-accept)))))
+
+(defun respond (content request response)
+  "Dispatch CONTENT rendering based on request Accept and route response metadata."
+  (io.github.cl-sdk.wst.routing:with-request-data (accept route)
+      request
+    (let* ((request-accept accept)
+           (route-accept (getf (io.github.cl-sdk.wst.routing::route-custom route) :response-accepts))
+           (mime-type (or (find-best-response-accept route-accept request-accept)
+                         *default-response-accept*)))
+      (respond-with (car mime-type) content request response))))
 
 (defun %valid-quoted-pair-char-p (c)
   (or (char= c #\Tab)
@@ -72,6 +132,37 @@
                            (cons name value))
                          (cons (string-downcase trimmed) "")))))
 
+(defun %process-request-accepts (request-accepts)
+  (labels ((get-accept-entry-quality-value (entry)
+             (or (find-if (lambda (item) (string-equal (car item) "q"))
+                          entry)
+                 '("q" . "1.0")))
+           (media-range-specificity (entry)
+             (let* ((parts (split "/" (string (car entry))))
+                    (media-type (first parts))
+                    (media-subtype (second parts)))
+               (cond
+                 ((and media-type media-subtype
+                       (string-equal media-type "*")
+                       (string-equal media-subtype "*"))
+                  0)
+                 ((and media-subtype
+                       (string-equal media-subtype "*"))
+                  1)
+                 ((and media-type media-subtype)
+                  2)
+                 (t
+                  +invalid-media-range-specificity+)))))
+    (sort request-accepts
+          (lambda (a b)
+            (let* ((qa (get-accept-entry-quality-value (cdr a)))
+                   (qb (get-accept-entry-quality-value (cdr b)))
+                   (qa-value (serapeum:parse-float (cdr qa)))
+                   (qb-value (serapeum:parse-float (cdr qb))))
+              (if (= qa-value qb-value)
+                  (> (media-range-specificity a) (media-range-specificity b))
+                  (> qa-value qb-value)))))))
+
 (defun parse-request-accept (accept-header)
   "Parse an HTTP Accept header into media-range entries.
 
@@ -82,10 +173,11 @@ MEDIA-RANGE-KEYWORD is interned in the keyword package and lowercased
   an empty string as value."
   (check-type accept-header string)
   (unless (string= (string-trim '(#\Space #\Tab) accept-header) "")
-    (loop :for entry :in (split "," accept-header)
-          :for trimmed-entry = (string-trim '(#\Space #\Tab) entry)
-          :unless (string= trimmed-entry "")
-            :collect (let* ((sections (split ";" trimmed-entry))
-                            (media-range (string-trim '(#\Space #\Tab) (car sections)))
-                            (params (%parse-accept-parameters (cdr sections))))
-                       (cons (intern (string-downcase media-range) :keyword) params)))))
+    (%process-request-accepts
+     (loop :for entry :in (split "," accept-header)
+           :for trimmed-entry = (string-trim '(#\Space #\Tab) entry)
+           :unless (string= trimmed-entry "")
+             :collect (let* ((sections (split ";" trimmed-entry))
+                             (media-range (string-trim '(#\Space #\Tab) (car sections)))
+                             (params (%parse-accept-parameters (cdr sections))))
+                        (cons (intern (string-downcase media-range) :keyword) params))))))
