@@ -25,11 +25,21 @@ Example route composition:
 ```lisp
 (defparameter api
   `(:wrap
-    :before (list acquire-request-connection manage-session)
-    :after (list http-response-cookies->set-cookie release-request-connection)
-    :route (:resource "/api/v1"
-                      (:route :POST api-sign-up "/sign-up" api-sign-up-controller)
-                      (:route :POST api-log-in "/log-in" api-log-in-controller))))
+    :before (trace-context acquire-database-connection manage-session)
+    :after (release-request-connection session->cookie write-cookies)
+    :route (:group
+             (:route :POST authenticate "/authenticate" authenticate-controller)
+             (:resource "/api/v1"
+               (:wrap
+                :before (retrieve-authed-user)
+                :route (:resource "/users"
+                         (:route :GET api-get-users api-get-users-controller)
+                           (:route :POST api-create-user api-create-user-controller)
+                           (:route :GET api-retrieve-user-by-id "/:id" api-retrieve-user-by-id-controller))
+                         (:resource "/groups"
+                           (:route :GET api-list-groups api-list-groups-controller)
+                           (:route :POST api-create-group api-create-group-controller)
+                           (:route :GET api-retrieve-group-by-id "/:id" api-retrieve-group-by-id-controller)))))))
 ```
 
 #### examples
