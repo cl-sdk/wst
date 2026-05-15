@@ -82,10 +82,11 @@ returned. Returns the selected accept entry as a
                         response-accepts)))
       (loop :for request-accept :in request-accepts
             :for q-entry = (%get-q-parameter (cdr request-accept))
-            :unless (and q-entry (%q-value-zero-p (cdr q-entry)))
-              :for response-accept = (%find-response-accept filtered-response-accepts request-accept)
-              :when response-accept
-                :return (cons response-accept (cdr request-accept))))))
+            :for response-accept = (if (and q-entry (%q-value-zero-p (cdr q-entry)))
+                                       nil
+                                       (%find-response-accept filtered-response-accepts request-accept))
+            :when response-accept
+              :return (cons response-accept (cdr request-accept))))))
 
 (defun respond (content request response)
   "Dispatch CONTENT rendering based on request Accept and route response metadata."
@@ -197,6 +198,10 @@ returned. Returns the selected accept entry as a
       (let ((q-entry (%get-q-parameter (cdr entry))))
         (when q-entry
           (%validate-q-value (cdr q-entry)))))
+    (when (> (length request-accepts) 1)
+      (dolist (entry request-accepts)
+        (unless (%get-q-parameter (cdr entry))
+          (nconc entry (list (cons "q" "1.0"))))))
     (sort request-accepts
           (lambda (a b)
             (let* ((qa (get-accept-entry-quality-value (cdr a)))
