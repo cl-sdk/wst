@@ -45,8 +45,7 @@ Returns REQUEST (mutated in place) for convenient use in middleware chains."
 
 Always includes :traceparent. Includes :tracestate when CTX carries a
 non-nil tracestate value."
-  (let ((headers (list :traceparent (traceparent-string ctx))))
-    (when (trace-context-tracestate ctx)
-      (setf headers (append headers
-                            (list :tracestate (trace-context-tracestate ctx)))))
-    headers))
+  (if (trace-context-tracestate ctx)
+      (list :traceparent (traceparent-string ctx)
+            :tracestate (trace-context-tracestate ctx))
+      (list :traceparent (traceparent-string ctx))))

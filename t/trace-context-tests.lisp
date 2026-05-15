@@ -160,12 +160,11 @@
                       (trace-context-parent-id child))))))
 
 (test child-trace-context-inherits-tracestate-from-parent
-  (let* ((parent (parse-traceparent
-                  "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"))
-         (_ (setf (trace-context-tracestate parent) "vendor=abc"))
-         (child (child-trace-context parent)))
-    (declare (ignore _))
-    (is (string= "vendor=abc" (trace-context-tracestate child)))))
+  (let ((parent (parse-traceparent
+                 "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")))
+    (setf (trace-context-tracestate parent) "vendor=abc")
+    (let ((child (child-trace-context parent)))
+      (is (string= "vendor=abc" (trace-context-tracestate child))))))
 
 (test child-trace-context-overrides-tracestate-when-provided
   (let* ((parent (parse-traceparent

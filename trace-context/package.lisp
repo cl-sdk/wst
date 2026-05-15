@@ -2,6 +2,7 @@
   (:use #:cl)
   (:export
    #:trace-context
+   #:make-trace-context
    #:trace-context-version
    #:trace-context-trace-id
    #:trace-context-parent-id
@@ -138,9 +139,7 @@ PARENT-CTX. Pass NIL explicitly to suppress tracestate propagation."
                       :trace-id (trace-context-trace-id parent-ctx)
                       :parent-id (make-span-id)
                       :trace-flags (trace-context-trace-flags parent-ctx)
-                      :tracestate (if tracestate
-                                      tracestate
-                                      (trace-context-tracestate parent-ctx))))
+                      :tracestate (or tracestate (trace-context-tracestate parent-ctx))))
 
 (defun traceparent-string (ctx)
   "Serialize CTX to a traceparent header value string.
