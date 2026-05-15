@@ -51,17 +51,42 @@ The default method returns RESPONSE unchanged.")
       (t
        (find (car request-accept) response-accepts :test #'eq)))))
 
+(defun %get-q-parameter (params)
+  "Return the (\"q\" . value) pair from PARAMS alist, or NIL if absent."
+  (find-if (lambda (p) (string-equal (car p) "q")) params))
+
+(defun %q-value-zero-p (q-string)
+  "Return T if Q-STRING parses to zero."
+  (zerop (serapeum:parse-float q-string)))
+
 (defun find-best-response-accept (response-accepts request-accepts)
   "Pick the first acceptable response media type supported by RESPONSE-ACCEPTS.
 
 REQUEST-ACCEPTS must be ordered by preference (for example, output from
-`parse-request-accept`). Returns the selected accept entry as a
+`parse-request-accept`). When REQUEST-ACCEPTS is NIL (absent Accept header),
+any media type is acceptable and the first element of RESPONSE-ACCEPTS is
+returned. Returns the selected accept entry as a
 \(MEDIA-RANGE-KEYWORD . PARAMETERS-ALIST) pair, or NIL when no match exists."
-  (when (and response-accepts request-accepts)
-    (loop :for request-accept :in request-accepts
-          :for response-accept = (%find-response-accept response-accepts request-accept)
-          :when response-accept
-            :return (cons response-accept (cdr request-accept)))))
+  (when (null request-accepts)
+    (return-from find-best-response-accept
+      (when response-accepts
+        (cons (car response-accepts) '(("q" . "1.0"))))))
+  (when response-accepts
+    (let* ((excluded
+             (loop :for ra :in request-accepts
+                   :for q-entry = (%get-q-parameter (cdr ra))
+                   :when (and q-entry (%q-value-zero-p (cdr q-entry)))
+                     :collect (car ra)))
+           (filtered-response-accepts
+             (remove-if (lambda (ra) (member ra excluded :test #'eq))
+                        response-accepts)))
+      (loop :for request-accept :in request-accepts
+            :for q-entry = (%get-q-parameter (cdr request-accept))
+            :for response-accept = (if (and q-entry (%q-value-zero-p (cdr q-entry)))
+                                       nil
+                                       (%find-response-accept filtered-response-accepts request-accept))
+            :when response-accept
+              :return (cons response-accept (cdr request-accept))))))
 
 (defun respond (content request response)
   "Dispatch CONTENT rendering based on request Accept and route response metadata."
@@ -132,10 +157,26 @@ REQUEST-ACCEPTS must be ordered by preference (for example, output from
                            (cons name value))
                          (cons (string-downcase trimmed) "")))))
 
+(defun %validate-q-value (q-string)
+  "Signal an error if Q-STRING is not a valid RFC 9110 §12.4.2 quality value."
+  (let ((q-value (handler-case (serapeum:parse-float q-string)
+                   (error () (error "q-value ~S is not a valid number (RFC 9110 §12.4.2)" q-string)))))
+    (unless (<= 0.0 q-value 1.0)
+      (error "q-value ~S is out of range [0, 1] (RFC 9110 §12.4.2)" q-string))
+    (let ((dot-pos (position #\. q-string)))
+      (when dot-pos
+        (let ((after-dot (subseq q-string (1+ dot-pos))))
+          (loop :for c :across after-dot
+                :unless (digit-char-p c)
+                  :do (error "q-value ~S contains non-digit after decimal point (RFC 9110 §12.4.2)"
+                             q-string))
+          (when (> (length after-dot) 3)
+            (error "q-value ~S has more than 3 decimal places (RFC 9110 §12.4.2)" q-string)))))
+    q-value))
+
 (defun %process-request-accepts (request-accepts)
   (labels ((get-accept-entry-quality-value (entry)
-             (or (find-if (lambda (item) (string-equal (car item) "q"))
-                          entry)
+             (or (%get-q-parameter entry)
                  '("q" . "1.0")))
            (media-range-specificity (entry)
              (let* ((parts (split "/" (string (car entry))))
@@ -153,6 +194,14 @@ REQUEST-ACCEPTS must be ordered by preference (for example, output from
                   2)
                  (t
                   +invalid-media-range-specificity+)))))
+    (dolist (entry request-accepts)
+      (let ((q-entry (%get-q-parameter (cdr entry))))
+        (when q-entry
+          (%validate-q-value (cdr q-entry)))))
+    (when (> (length request-accepts) 1)
+      (dolist (entry request-accepts)
+        (unless (%get-q-parameter (cdr entry))
+          (nconc entry (list (cons "q" "1.0"))))))
     (sort request-accepts
           (lambda (a b)
             (let* ((qa (get-accept-entry-quality-value (cdr a)))
@@ -171,6 +220,8 @@ MEDIA-RANGE-KEYWORD is interned in the keyword package and lowercased
   \(e.g. :|text/html|, :|application/json|, :|*/*|). PARAMETERS-ALIST is
   an alist of (\"name\" . \"value\") string conses; valueless parameters use
   an empty string as value."
+  (when (null accept-header)
+    (return-from parse-request-accept nil))
   (check-type accept-header string)
   (unless (string= (string-trim '(#\Space #\Tab) accept-header) "")
     (%process-request-accepts
