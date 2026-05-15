@@ -32,17 +32,6 @@ Example route composition:
                       (:route :POST api-log-in "/log-in" api-log-in-controller))))
 ```
 
-### Request Accept Behavior
-
-`io.github.cl-sdk.wst.request-accept:parse-request-accept` parses and orders media ranges by:
-
-1. highest `q` value first
-2. most specific media range first on equal `q` (`application/json` > `text/*` > `*/*`)
-
-`io.github.cl-sdk.wst.request-accept:respond` uses the best match from route `:response-accepts`.
-If no route accepts match (or route accepts are not configured), it falls back to `text/plain`.
-If a media type has no specialized `respond-with` method, the default method leaves the response unchanged.
-
 #### examples
 
 You can find the examples at:
