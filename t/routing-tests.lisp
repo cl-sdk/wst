@@ -228,16 +228,16 @@
 
 (def-route-testing parse-request-cookies ()
   (io.github.cl-sdk.wst.routing:add-route 'cookies "/" :GET
-                         (lambda (request response)
-                           (declare (ignorable response))
-                           (let ((cookies (getf (io.github.cl-sdk.wst.routing:request-data request) :cookies)))
-                             (5am:is (= 2 (length cookies)))
-                             (5am:is (string-equal "a"
-                                                   (io.github.cl-sdk.wst.cookies:cookie-value
-                                                    (find "first" cookies
-                                                          :key #'io.github.cl-sdk.wst.cookies:cookie-name
-                                                          :test #'string-equal))))
-                             response)))
+                                          (lambda (request response)
+                                            (let ((cookies (io.github.cl-sdk.wst.cookies:parse-cookies
+                                                            (io.github.cl-sdk.wst.routing:request-headers request))))
+                                              (5am:is (= 2 (length cookies)))
+                                              (5am:is (string-equal "a"
+                                                                    (io.github.cl-sdk.wst.cookies:cookie-value
+                                                                     (find "first" cookies
+                                                                           :key #'io.github.cl-sdk.wst.cookies:cookie-name
+                                                                           :test #'string-equal)))))
+                                            response))
   (io.github.cl-sdk.wst.routing:dispatch-route (io.github.cl-sdk.wst.routing:make-request
                                :uri "/"
                                :method :GET
