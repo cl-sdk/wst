@@ -43,6 +43,7 @@ Example:
                                        evaluation-context
                                        (request-data-key :feature-flag-evaluation-context))
   "Create a feature-flag client composed with request-scoped context.
+OBJECT-OF-INTEREST defaults to REQUEST and is used by RESOLVE-PROVIDER.
 Example:
   (client-for-request request :domain \"payments\" :evaluation-context '(:app \"checkout\"))
   => #S(FEATURE-FLAG-CLIENT ...)"

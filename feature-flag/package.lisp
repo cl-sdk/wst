@@ -102,6 +102,7 @@ Example:
 (defgeneric resolve-provider (object-of-interest domain)
   (:documentation "Resolve provider for OBJECT-OF-INTEREST and DOMAIN.
 Users should implement this generic to select the correct provider from app/request state.
+Default method fallback returns a noop provider when no specialized method exists.
 Example:
   (resolve-provider request \"payments\")
   => #<PROVIDER ...>"))
