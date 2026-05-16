@@ -385,7 +385,7 @@ Example:
               . "Merge plist contexts left-to-right (later values win).
 Example:
   (merge-evaluation-contexts '(:a 1 :shared :api) '(:shared :client :b 2))
-  => (:a 1 :shared :client :b 2)")
+  => (:a 1 :b 2 :shared :client) ; key order may vary")
              (make-evaluation-details
               . "Create an evaluation-details record.
 Example:
