@@ -37,17 +37,19 @@ Example:
   (getf (io.github.cl-sdk.wst.routing:request-data request) request-data-key))
 
 (defun client-for-request (request &key
-                                      domain
-                                      (name "request-client")
-                                      evaluation-context
-                                      (request-data-key :feature-flag-evaluation-context))
+                                       domain
+                                       (name "request-client")
+                                       (object-of-interest request)
+                                       evaluation-context
+                                       (request-data-key :feature-flag-evaluation-context))
   "Create a feature-flag client composed with request-scoped context.
 Example:
-  (client-for-request request :domain \"payments\" :evaluation-context '(:app \"checkout\"))
+  (client-for-request request :domain \"payments\" :object-of-interest request :evaluation-context '(:app \"checkout\"))
   => #S(FEATURE-FLAG-CLIENT ...)"
   (create-client :name name
-                 :domain domain
-                 :evaluation-context
-                 (merge-evaluation-contexts
-                  evaluation-context
+                  :domain domain
+                  :object-of-interest object-of-interest
+                  :evaluation-context
+                  (merge-evaluation-contexts
+                   evaluation-context
                   (feature-flag-context-of request :request-data-key request-data-key))))

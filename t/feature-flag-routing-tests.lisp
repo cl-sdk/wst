@@ -24,6 +24,11 @@
                            :value default-value
                            :reason *reason-static*))
 
+(defmethod resolve-provider ((request io.github.cl-sdk.wst.routing::request) domain)
+  (declare (ignore domain))
+  (or (getf (io.github.cl-sdk.wst.routing:request-data request) :feature-flag-provider)
+      (call-next-method)))
+
 (test middleware-injects-request-scoped-context
   (let* ((request (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))
          (response (io.github.cl-sdk.wst.routing:make-response))
@@ -46,7 +51,9 @@
                         :context-fn (lambda (request)
                                       (declare (ignore request))
                                       '(:tenant "acme" :shared :request)))))
-      (set-provider provider)
+      (setf (io.github.cl-sdk.wst.routing:request-data request)
+            (append (io.github.cl-sdk.wst.routing:request-data request)
+                    (list :feature-flag-provider provider)))
       (funcall middleware request response)
       (let ((client (client-for-request request :evaluation-context '(:shared :client :app "shop"))))
         (is-false (get-boolean-value client "flag-a" nil :evaluation-context '(:shared :call)))

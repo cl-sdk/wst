@@ -3,8 +3,8 @@
   (:documentation "Feature-flag primitives for wst.
 
 MVP implemented:
-- Global API provider and domain provider registry
-- Client creation and domain-aware provider resolution
+- User-defined provider resolution via object-of-interest + domain
+- Client creation and domain-aware provider lookup
 - Evaluation context merge (API -> client -> invocation)
 - Typed evaluations: boolean/string/number/object
 - Evaluation details with reason and error metadata
@@ -27,11 +27,11 @@ Planned for later phases:
    #:feature-flag-client
    #:feature-flag-client-name
    #:feature-flag-client-domain
+   #:feature-flag-client-object-of-interest
    #:feature-flag-client-evaluation-context
    #:make-client
    #:create-client
-   #:set-provider
-   #:get-provider
+   #:resolve-provider
    #:set-evaluation-context
    #:get-evaluation-context
    #:merge-evaluation-contexts
@@ -99,6 +99,13 @@ Example:
   (shutdown-provider (make-instance 'provider :name \"demo\"))
   => #<PROVIDER ...>"))
 
+(defgeneric resolve-provider (object-of-interest domain)
+  (:documentation "Resolve provider for OBJECT-OF-INTEREST and DOMAIN.
+Users should implement this generic to select the correct provider from app/request state.
+Example:
+  (resolve-provider request \"payments\")
+  => #<PROVIDER ...>"))
+
 (defgeneric resolve-boolean-details (provider flag-key default-value evaluation-context)
   (:documentation "Resolve boolean flag details.
 Example:
@@ -134,13 +141,13 @@ Example:
   metadata)
 
 (defstruct feature-flag-client
-  "A client has optional DOMAIN and per-client EVALUATION-CONTEXT."
+  "A client has optional DOMAIN, OBJECT-OF-INTEREST and per-client EVALUATION-CONTEXT."
   (name "client" :type string)
   domain
+  object-of-interest
   (evaluation-context nil :type list))
 
-(defparameter *default-provider* (make-instance 'noop-provider :name "noop"))
-(defparameter *domain-providers* (make-hash-table :test 'equal))
+(defparameter *noop-provider* (make-instance 'noop-provider :name "noop"))
 (defparameter *api-evaluation-context* nil)
 
 (defun %plist-even-p (plist)
@@ -188,6 +195,10 @@ Example:
 (defmethod shutdown-provider ((provider provider))
   provider)
 
+(defmethod resolve-provider ((object-of-interest t) domain)
+  (declare (ignore object-of-interest domain))
+  *noop-provider*)
+
 (defun %default-details (flag-key default-value &key
                           (reason *reason-default*)
                           error-code
@@ -229,51 +240,36 @@ Example:
                     :error-message "Provider does not implement object resolution."))
 
 (defun reset-feature-flag ()
-  "Reset global feature-flag API state.
+  "Reset global feature-flag API context.
 Example:
   (reset-feature-flag)
   => NIL"
-  (setf *default-provider* (make-instance 'noop-provider :name "noop")
-        *domain-providers* (make-hash-table :test 'equal)
-        *api-evaluation-context* nil))
+  (setf *api-evaluation-context* nil))
 
-(defun set-provider (provider &key domain)
-  "Set PROVIDER globally or for a DOMAIN.
-Lifecycle is caller-managed (initialize/shutdown are not called automatically).
-Example:
-  (set-provider (make-instance 'noop-provider :name \"default\") :domain \"payments\")
-  => #<NOOP-PROVIDER ...>"
-  (check-type provider provider)
-  (if domain
-      (setf (gethash domain *domain-providers*) provider)
-      (setf *default-provider* provider))
-  provider)
-
-(defun get-provider (&optional domain)
-  "Get provider for DOMAIN if present; otherwise default provider.
-Example:
-  (get-provider \"payments\")
-  => #<PROVIDER ...>"
-  (or (and domain (gethash domain *domain-providers*))
-      *default-provider*))
-
-(defun make-client (&key (name "client") domain evaluation-context)
+(defun make-client (&key (name "client") domain object-of-interest evaluation-context)
   "Create a feature-flag client.
 Example:
-  (make-client :name \"checkout\" :domain \"payments\")
+  (make-client :name \"checkout\" :domain \"payments\" :object-of-interest request)
   => #S(FEATURE-FLAG-CLIENT ...)"
   (make-feature-flag-client :name name :domain domain
-                            :evaluation-context (%ensure-context evaluation-context "client evaluation context")))
+                             :object-of-interest object-of-interest
+                             :evaluation-context (%ensure-context evaluation-context "client evaluation context")))
 
-(defun create-client (&key (name "client") domain evaluation-context)
+(defun create-client (&key (name "client") domain object-of-interest evaluation-context)
   "Create a feature-flag client (alias of MAKE-CLIENT).
 Example:
   (create-client :name \"checkout\")
   => #S(FEATURE-FLAG-CLIENT ...)"
-  (make-client :name name :domain domain :evaluation-context evaluation-context))
+  (make-client :name name :domain domain
+               :object-of-interest object-of-interest
+               :evaluation-context evaluation-context))
 
 (defun %resolve-provider (client)
-  (get-provider (feature-flag-client-domain client)))
+  (let ((provider (resolve-provider (feature-flag-client-object-of-interest client)
+                                    (feature-flag-client-domain client))))
+    (if (typep provider 'provider)
+        provider
+        *noop-provider*)))
 
 (defun %type-ok-p (kind value)
   (case kind
