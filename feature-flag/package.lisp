@@ -241,6 +241,7 @@ Example:
 
 (defun reset-feature-flag ()
   "Reset only the global API evaluation context.
+This function keeps the broader name for API compatibility with previous releases.
 Example:
   (reset-feature-flag) ; clears the value set by SET-EVALUATION-CONTEXT
   => NIL"
@@ -270,7 +271,7 @@ Example:
          (provider (resolve-provider object-of-interest domain)))
     (if (typep provider 'provider)
         provider
-        (error "resolve-provider must return a provider for object ~S and domain ~S, got: ~S"
+        (error "resolve-provider expected type PROVIDER for object ~S and domain ~S, got: ~S"
                object-of-interest
                domain
                provider))))
@@ -291,14 +292,14 @@ Example:
     (:object #'resolve-object-details)))
 
 (defun %evaluate-details (client kind flag-key default-value invocation-context)
-  (let* ((context (merge-evaluation-contexts
+  (let* ((provider (%resolve-provider client))
+         (context (merge-evaluation-contexts
                    *api-evaluation-context*
                    (feature-flag-client-evaluation-context client)
                    invocation-context))
          (resolver (%resolver-for-kind kind)))
     (handler-case
-        (let* ((provider (%resolve-provider client))
-               (details (funcall resolver provider flag-key default-value context)))
+        (let ((details (funcall resolver provider flag-key default-value context)))
           (if (and (typep details 'evaluation-details)
                    (%type-ok-p kind (evaluation-details-value details)))
               details
