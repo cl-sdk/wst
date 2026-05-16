@@ -1,6 +1,6 @@
-(defpackage #:io.github.cl-sdk.wst.openfeature
+(defpackage #:io.github.cl-sdk.wst.feature-flag
   (:use #:cl)
-  (:documentation "OpenFeature-style feature flag primitives for wst.
+  (:documentation "Feature-flag primitives for wst.
 
 MVP implemented:
 - Global API provider and domain provider registry
@@ -24,10 +24,10 @@ Planned for later phases:
    #:resolve-string-details
    #:resolve-number-details
    #:resolve-object-details
-   #:openfeature-client
-   #:openfeature-client-name
-   #:openfeature-client-domain
-   #:openfeature-client-evaluation-context
+   #:feature-flag-client
+   #:feature-flag-client-name
+   #:feature-flag-client-domain
+   #:feature-flag-client-evaluation-context
    #:make-client
    #:create-client
    #:set-provider
@@ -52,7 +52,7 @@ Planned for later phases:
    #:get-string-details
    #:get-number-details
    #:get-object-details
-   #:reset-openfeature
+   #:reset-feature-flag
    #:*reason-default*
    #:*reason-static*
    #:*reason-error*
@@ -61,7 +61,7 @@ Planned for later phases:
    #:*error-type-mismatch*
    #:*error-general*))
 
-(in-package #:io.github.cl-sdk.wst.openfeature)
+(in-package #:io.github.cl-sdk.wst.feature-flag)
 
 (defparameter *reason-default* :default)
 (defparameter *reason-static* :static)
@@ -101,7 +101,7 @@ Planned for later phases:
   (:documentation "Resolve object flag details."))
 
 (defstruct evaluation-details
-  "Evaluation detail record compatible with OpenFeature-style metadata."
+  "Evaluation detail record for feature-flag metadata."
   flag-key
   value
   variant
@@ -110,7 +110,7 @@ Planned for later phases:
   error-message
   metadata)
 
-(defstruct openfeature-client
+(defstruct feature-flag-client
   "A client has optional DOMAIN and per-client EVALUATION-CONTEXT."
   (name "client" :type string)
   domain
@@ -195,8 +195,8 @@ Planned for later phases:
                     :error-code *error-provider-not-ready*
                     :error-message "Provider does not implement object resolution."))
 
-(defun reset-openfeature ()
-  "Reset global OpenFeature API state."
+(defun reset-feature-flag ()
+  "Reset global feature-flag API state."
   (setf *default-provider* (make-instance 'noop-provider :name "noop")
         *domain-providers* (make-hash-table :test 'equal)
         *api-evaluation-context* nil))
@@ -216,8 +216,8 @@ Planned for later phases:
       *default-provider*))
 
 (defun make-client (&key (name "client") domain evaluation-context)
-  "Create an OpenFeature client."
-  (make-openfeature-client :name name
+  "Create a feature-flag client."
+  (make-feature-flag-client :name name
                            :domain domain
                            :evaluation-context (%ensure-context evaluation-context "client evaluation context")))
 
@@ -226,7 +226,7 @@ Planned for later phases:
   (make-client :name name :domain domain :evaluation-context evaluation-context))
 
 (defun %resolve-provider (client)
-  (get-provider (openfeature-client-domain client)))
+  (get-provider (feature-flag-client-domain client)))
 
 (defun %type-ok-p (kind value)
   (case kind
@@ -247,7 +247,7 @@ Planned for later phases:
   (let* ((provider (%resolve-provider client))
          (context (merge-evaluation-contexts
                    *api-evaluation-context*
-                   (openfeature-client-evaluation-context client)
+                   (feature-flag-client-evaluation-context client)
                    invocation-context))
          (resolver (%resolver-for-kind kind)))
     (handler-case

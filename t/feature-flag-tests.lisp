@@ -1,17 +1,17 @@
-(defpackage #:io.github.cl-sdk.wst.openfeature.test
-  (:use #:cl #:fiveam #:io.github.cl-sdk.wst.openfeature))
+(defpackage #:io.github.cl-sdk.wst.feature-flag.test
+  (:use #:cl #:fiveam #:io.github.cl-sdk.wst.feature-flag))
 
-(in-package #:io.github.cl-sdk.wst.openfeature.test)
+(in-package #:io.github.cl-sdk.wst.feature-flag.test)
 
-(def-suite openfeature-suite)
-(in-suite openfeature-suite)
+(def-suite feature-flag-suite)
+(in-suite feature-flag-suite)
 
-(defmacro with-openfeature-reset (&body body)
+(defmacro with-feature-flag-reset (&body body)
   `(unwind-protect
         (progn
-          (reset-openfeature)
+          (reset-feature-flag)
           ,@body)
-     (reset-openfeature)))
+     (reset-feature-flag)))
 
 (defclass static-provider (provider)
   ((values :initarg :values :reader static-provider-values)
@@ -75,7 +75,7 @@
   (error "provider exploded"))
 
 (test noop-provider-returns-default-and-metadata-error
-  (with-openfeature-reset
+  (with-feature-flag-reset
     (let* ((client (create-client))
            (details (get-boolean-details client "flag-a" nil)))
       (is-false (evaluation-details-value details))
@@ -83,7 +83,7 @@
       (is (eq *error-provider-not-ready* (evaluation-details-error-code details))))))
 
 (test provider-errors-fallback-to-default-with-general-error
-  (with-openfeature-reset
+  (with-feature-flag-reset
     (set-provider (make-instance 'exploding-provider :name "explode"))
     (let* ((client (create-client))
            (details (get-boolean-details client "flag-a" t)))
@@ -92,7 +92,7 @@
       (is (eq *error-general* (evaluation-details-error-code details))))))
 
 (test evaluation-context-merges-api-client-and-invocation-with-right-precedence
-  (with-openfeature-reset
+  (with-feature-flag-reset
     (let ((provider (make-instance 'static-provider :name "static"
                                    :values '(("flag-a" . t)))))
       (set-provider provider)
@@ -106,7 +106,7 @@
           (is (= 3 (getf ctx :call-only))))))))
 
 (test domain-provider-selection-prefers-domain-over-default
-  (with-openfeature-reset
+  (with-feature-flag-reset
     (set-provider (make-instance 'static-provider :name "default"
                                  :values '(("flag-a" . nil))))
     (set-provider (make-instance 'static-provider :name "payments"
@@ -118,7 +118,7 @@
       (is-true (get-boolean-value payments-client "flag-a" nil)))))
 
 (test typed-evaluations-return-provider-values-and-details
-  (with-openfeature-reset
+  (with-feature-flag-reset
     (set-provider (make-instance 'static-provider :name "typed"
                                  :values '(("bool-flag" . t)
                                            ("str-flag" . "beta")

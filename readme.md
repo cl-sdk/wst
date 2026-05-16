@@ -20,7 +20,7 @@ Behavior is built from pipelines and composition, where middleware and handlers 
 - Circuit breaker core and routing middleware integration
 - Accept-aware response selection helpers (`io.github.cl-sdk.wst.request-accept`)
 - W3C Trace Context propagation (`traceparent`/`tracestate`) with routing adapter (`io.github.cl-sdk.wst.trace-context`)
-- OpenFeature-style feature flags with core API/client/provider model and routing adapter (`io.github.cl-sdk.wst.openfeature`)
+- Feature flags with core API/client/provider model and routing adapter (`io.github.cl-sdk.wst.feature-flag`)
 
 Example route composition:
 
@@ -51,12 +51,12 @@ You can find the examples at:
 - [cl-sdk/wst-url-shortener-example](https://github.com/cl-sdk/wst-url-shortener-example)
 - [cl-sdk/wst-bookmark-example](https://github.com/cl-sdk/wst-bookmark-example)
 
-### openfeature architecture and scope
+### feature-flag architecture and scope
 
-The OpenFeature implementation is split into:
+The feature-flag implementation is split into:
 
-- Core (`io.github.cl-sdk.wst.openfeature`): API state, providers, clients, evaluation context merge, typed evaluations, and evaluation details.
-- Routing adapter (`io.github.cl-sdk.wst.openfeature.routing`): request-scoped evaluation context injection and request-aware client composition.
+- Core (`io.github.cl-sdk.wst.feature-flag`): API state, providers, clients, evaluation context merge, typed evaluations, and evaluation details.
+- Routing adapter (`io.github.cl-sdk.wst.feature-flag.routing`): request-scoped evaluation context injection and request-aware client composition.
 
 Current MVP scope:
 
@@ -85,14 +85,14 @@ A provider returns `evaluation-details` objects with at least a `value`, and opt
 
 ### routing usage
 
-Use `wrap-openfeature-context` as a `:before` middleware to inject request-scoped evaluation context into `request-data`.
+Use `wrap-feature-flag-context` as a `:before` middleware to inject request-scoped evaluation context into `request-data`.
 
 Use `client-for-request` to build a client whose context includes request-scoped values plus any explicit client/request invocation context.
 
 ### constraints
 
 - Core package has zero routing dependency.
-- Routing concerns are isolated in `io.github.cl-sdk.wst.openfeature.routing`.
+- Routing concerns are isolated in `io.github.cl-sdk.wst.feature-flag.routing`.
 - Context handling is explicit (plists only), with deterministic precedence.
 
 ### phase 2+ roadmap
