@@ -87,7 +87,7 @@
 
 (defmethod resolve-provider ((holder provider-holder) domain)
   (or (and domain (cdr (assoc domain (provider-holder-domain-providers holder) :test #'equal)))
-      (provider-holder-default-provider)
+      (provider-holder-default-provider holder)
       (call-next-method)))
 
 (test noop-provider-returns-default-and-metadata-error

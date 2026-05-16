@@ -44,7 +44,7 @@ Example:
                                        (request-data-key :feature-flag-evaluation-context))
   "Create a feature-flag client composed with request-scoped context.
 Example:
-  (client-for-request request :domain \"payments\" :object-of-interest request :evaluation-context '(:app \"checkout\"))
+  (client-for-request request :domain \"payments\" :evaluation-context '(:app \"checkout\"))
   => #S(FEATURE-FLAG-CLIENT ...)"
   (create-client :name name
                   :domain domain
