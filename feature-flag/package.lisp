@@ -417,8 +417,8 @@ Example:
               . "Return evaluation error code.
 Example:
   (evaluation-details-error-code
-   (make-evaluation-details :flag-key \"beta\" :value nil :error-code *error-general*))
-  => :GENERAL")
+   (make-evaluation-details :flag-key \"beta\" :value nil :error-code *error-flag-not-found*))
+  => :FLAG-NOT-FOUND")
              (evaluation-details-error-message
               . "Return evaluation error message.
 Example:
