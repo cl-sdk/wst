@@ -5,7 +5,7 @@
 MVP implemented:
 - User-defined provider resolution via object-of-interest + domain
 - Client creation and domain-aware provider lookup
-- Evaluation context merge (API -> client -> invocation)
+- Evaluation context merge (client -> invocation)
 - Typed evaluations: boolean/string/number/object
 - Evaluation details with reason and error metadata
 
@@ -32,8 +32,6 @@ Planned for later phases:
    #:make-client
    #:create-client
    #:resolve-provider
-   #:set-evaluation-context
-   #:get-evaluation-context
    #:merge-evaluation-contexts
    #:evaluation-details
    #:make-evaluation-details
@@ -149,7 +147,6 @@ Example:
   (evaluation-context nil :type list))
 
 (defparameter *default-provider* (make-instance 'noop-provider :name "noop"))
-(defparameter *api-evaluation-context* nil)
 
 (defun %plist-even-p (plist)
   (and (listp plist)
@@ -172,20 +169,6 @@ Example:
         (%ensure-context context "evaluation context")
         (loop :for (key value) :on context :by #'cddr
               :do (setf (getf result key) value))))))
-
-(defun set-evaluation-context (context)
-  "Set global API evaluation context.
-Example:
-  (set-evaluation-context '(:region \"eu\"))
-  => (:region \"eu\")"
-  (setf *api-evaluation-context* (%ensure-context context "global evaluation context")))
-
-(defun get-evaluation-context ()
-  "Return global API evaluation context.
-Example:
-  (get-evaluation-context)
-  => (:region \"eu\")"
-  *api-evaluation-context*)
 
 (defmethod provider-metadata ((provider provider))
   (list :name (provider-name provider)))
@@ -241,13 +224,12 @@ Example:
                     :error-message "Provider does not implement object resolution."))
 
 (defun reset-feature-flag ()
-  "Reset the global API evaluation context.
-Provider selection state is user-managed and is not affected by this function;
-the default fallback noop provider used by RESOLVE-PROVIDER remains unchanged.
+  "No-op compatibility function.
+Provider selection and evaluation context state are user-managed.
 Example:
-  (reset-feature-flag) ; clears the value set by SET-EVALUATION-CONTEXT
+  (reset-feature-flag)
   => NIL"
-  (setf *api-evaluation-context* nil))
+  nil)
 
 (defun make-client (&key (name "client") domain object-of-interest evaluation-context)
   "Create a feature-flag client.
@@ -295,10 +277,9 @@ Example:
 
 (defun %evaluate-details (client kind flag-key default-value invocation-context)
   (let* ((provider (%resolve-provider client))
-         (context (merge-evaluation-contexts
-                   *api-evaluation-context*
-                   (feature-flag-client-evaluation-context client)
-                   invocation-context))
+          (context (merge-evaluation-contexts
+                    (feature-flag-client-evaluation-context client)
+                    invocation-context))
          (resolver (%resolver-for-kind kind)))
     (handler-case
         (let ((details (funcall resolver provider flag-key default-value context)))

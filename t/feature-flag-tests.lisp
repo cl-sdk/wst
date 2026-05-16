@@ -120,18 +120,16 @@
       (is-false (initialize-called-p provider))
       (is-false (shutdown-called-p provider)))))
 
-(test evaluation-context-merges-api-client-and-invocation-with-right-precedence
+(test evaluation-context-merges-client-and-invocation-with-right-precedence
   (with-feature-flag-reset
     (let* ((provider (make-instance 'static-provider :name "static"
                                     :values '(("flag-a" . t))))
            (holder (make-instance 'provider-holder :default-provider provider)))
-      (set-evaluation-context '(:shared :api :api-only 1))
       (let ((client (create-client :object-of-interest holder
                                    :evaluation-context '(:shared :client :client-only 2))))
         (is-true (get-boolean-value client "flag-a" nil :evaluation-context '(:shared :call :call-only 3)))
         (let ((ctx (static-provider-last-context provider)))
           (is (eq :call (getf ctx :shared)))
-          (is (= 1 (getf ctx :api-only)))
           (is (= 2 (getf ctx :client-only)))
           (is (= 3 (getf ctx :call-only))))))))
 
