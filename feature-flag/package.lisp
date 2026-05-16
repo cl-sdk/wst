@@ -159,6 +159,7 @@ Example:
 
 (defun merge-evaluation-contexts (&rest contexts)
   "Merge context plists in argument order so later contexts override earlier keys.
+Only explicit contexts passed by caller are merged (no implicit API/global context).
 Key order in result plists is implementation-dependent.
 Example:
   (merge-evaluation-contexts '(:a 1 :shared :api) '(:b 2 :shared :client) '(:c 3 :shared :call))
@@ -227,6 +228,7 @@ Example:
   "No-op compatibility function.
 Provider selection and evaluation context state are user-managed.
 Previously this reset global API evaluation context, which no longer exists.
+Deprecated: kept for backward compatibility; remove calls from application code.
 Example:
   (reset-feature-flag)
   => NIL"
