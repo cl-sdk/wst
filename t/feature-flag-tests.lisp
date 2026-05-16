@@ -74,6 +74,13 @@
   (declare (ignore provider flag-key default-value evaluation-context))
   (error "provider exploded"))
 
+(defclass lifecycle-provider (provider)
+  ((initialize-called-p :accessor lifecycle-provider-initialize-called-p :initform nil)))
+
+(defmethod initialize-provider ((provider lifecycle-provider))
+  (setf (lifecycle-provider-initialize-called-p provider) t)
+  provider)
+
 (test noop-provider-returns-default-and-metadata-error
   (with-feature-flag-reset
     (let* ((client (create-client))
@@ -90,6 +97,12 @@
       (is-true (evaluation-details-value details))
       (is (eq *reason-error* (evaluation-details-reason details)))
       (is (eq *error-general* (evaluation-details-error-code details))))))
+
+(test set-provider-does-not-manage-provider-lifecycle
+  (with-feature-flag-reset
+    (let ((provider (make-instance 'lifecycle-provider :name "lifecycle")))
+      (set-provider provider)
+      (is-false (lifecycle-provider-initialize-called-p provider)))))
 
 (test evaluation-context-merges-api-client-and-invocation-with-right-precedence
   (with-feature-flag-reset

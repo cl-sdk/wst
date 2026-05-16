@@ -87,12 +87,14 @@ Example:
 
 (defgeneric initialize-provider (provider)
   (:documentation "Initialize PROVIDER lifecycle.
+Caller-managed: API registration does not invoke this automatically.
 Example:
   (initialize-provider (make-instance 'provider :name \"demo\"))
   => #<PROVIDER ...>"))
 
 (defgeneric shutdown-provider (provider)
   (:documentation "Shutdown PROVIDER lifecycle.
+Caller-managed: API reset/registration does not invoke this automatically.
 Example:
   (shutdown-provider (make-instance 'provider :name \"demo\"))
   => #<PROVIDER ...>"))
@@ -237,11 +239,11 @@ Example:
 
 (defun set-provider (provider &key domain)
   "Set PROVIDER globally or for a DOMAIN.
+Lifecycle is caller-managed (initialize/shutdown are not called automatically).
 Example:
   (set-provider (make-instance 'noop-provider :name \"default\") :domain \"payments\")
   => #<NOOP-PROVIDER ...>"
   (check-type provider provider)
-  (initialize-provider provider)
   (if domain
       (setf (gethash domain *domain-providers*) provider)
       (setf *default-provider* provider))
