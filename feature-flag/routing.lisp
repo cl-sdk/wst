@@ -28,10 +28,10 @@
   (getf (io.github.cl-sdk.wst.routing:request-data request) request-data-key))
 
 (defun client-for-request (request &key
-                                      domain
-                                      (name "request-client")
-                                      evaluation-context
-                                      (request-data-key :feature-flag-evaluation-context))
+                                     domain
+                                     (name "request-client")
+                                     evaluation-context
+                                     (request-data-key :feature-flag-evaluation-context))
   "Create a feature-flag client composed with request-scoped context."
   (create-client :name name
                  :domain domain
