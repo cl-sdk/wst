@@ -83,6 +83,21 @@
     (io.github.cl-sdk.wst.routing:with-request-params ((count . #'parse-integer)) params
       (5am:is (= count 5)))))
 
+;;; request-header
+
+(5am:def-test request-header-matches-case-insensitively ()
+  (let ((request (io.github.cl-sdk.wst.routing:make-request
+                  :headers (cl-hash-util:hash ("Content-Type" "text/plain")))))
+    (5am:is (string= "text/plain"
+                     (io.github.cl-sdk.wst.routing:request-header request "content-type")))
+    (5am:is (string= "text/plain"
+                     (io.github.cl-sdk.wst.routing:request-header request "CONTENT-TYPE")))))
+
+(5am:def-test request-header-returns-nil-when-missing ()
+  (let ((request (io.github.cl-sdk.wst.routing:make-request
+                  :headers (cl-hash-util:hash ("Content-Type" "text/plain")))))
+    (5am:is (null (io.github.cl-sdk.wst.routing:request-header request "Authorization")))))
+
 ;;; with-response-data
 
 (5am:def-test with-response-data-extracts-values ()
