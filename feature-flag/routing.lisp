@@ -29,10 +29,11 @@ Example:
       (cons :continue response))))
 
 (defun feature-flag-context-of (request &key (request-data-key :feature-flag-evaluation-context))
-  "Return request-scoped feature-flag context from REQUEST, or NIL.
+  "Return request-scoped feature-flag context from REQUEST.
+Returns NIL when REQUEST-DATA-KEY is not present.
 Example:
   (feature-flag-context-of request)
-  => (:tenant \"acme\" :plan \"pro\") or NIL"
+  => (:tenant \"acme\" :plan \"pro\")"
   (getf (io.github.cl-sdk.wst.routing:request-data request) request-data-key))
 
 (defun client-for-request (request &key

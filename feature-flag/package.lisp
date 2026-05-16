@@ -259,10 +259,9 @@ Example:
 Example:
   (make-client :name \"checkout\" :domain \"payments\")
   => #S(FEATURE-FLAG-CLIENT ...)"
-  (make-feature-flag-client
-   :name name
-   :domain domain
-   :evaluation-context (%ensure-context evaluation-context "client evaluation context")))
+  (make-feature-flag-client :name name
+                            :domain domain
+                            :evaluation-context (%ensure-context evaluation-context "client evaluation context")))
 
 (defun create-client (&key (name "client") domain evaluation-context)
   "Create a feature-flag client (alias of MAKE-CLIENT).
