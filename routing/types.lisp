@@ -23,16 +23,12 @@ Slots:
   content
   (data nil :type list))
 
-(declaim (ftype (function (request t) (or null string))
+(declaim (ftype (function (request string &optional string) (or null string))
                 request-header))
-(defun request-header (request header-name)
-  "Return the value of HEADER-NAME from REQUEST headers, using case-insensitive matching."
-  (let ((headers (request-headers request))
-        (normalized-name (string header-name)))
-    (loop :for key :being :the :hash-keys :of headers
-          :using (hash-value value)
-          :when (string-equal normalized-name (string key))
-            :do (return value))))
+(defun request-header (request header-name &optional default-value)
+  "Return the value of HEADER-NAME from REQUEST headers hash table."
+  (or (gethash header-name (request-headers request))
+     default-value))
 
 (defstruct response
   "Structure representing an HTTP response.
