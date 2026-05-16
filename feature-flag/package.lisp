@@ -240,8 +240,8 @@ Example:
                     :error-message "Provider does not implement object resolution."))
 
 (defun reset-feature-flag ()
-  "Reset only the global API evaluation context.
-Unlike previous revisions, this no longer resets provider mappings because provider state is user-managed.
+  "Reset the global API evaluation context.
+Provider state is user-managed and is not affected by this function.
 Example:
   (reset-feature-flag) ; clears the value set by SET-EVALUATION-CONTEXT
   => NIL"
@@ -272,7 +272,7 @@ Example:
     (if (typep provider 'provider)
         provider
         (error "resolve-provider expected type PROVIDER for object ~S and domain ~S, got: ~S"
-               object-of-interest
+               (type-of object-of-interest)
                domain
                provider))))
 
