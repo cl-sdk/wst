@@ -241,7 +241,8 @@ Example:
 
 (defun reset-feature-flag ()
   "Reset the global API evaluation context.
-Provider state is user-managed and is not affected by this function.
+Provider selection state is user-managed and is not affected by this function;
+the default fallback noop provider used by RESOLVE-PROVIDER remains unchanged.
 Example:
   (reset-feature-flag) ; clears the value set by SET-EVALUATION-CONTEXT
   => NIL"
@@ -271,7 +272,7 @@ Example:
          (provider (resolve-provider object-of-interest domain)))
     (if (typep provider 'provider)
         provider
-        (error "resolve-provider expected type PROVIDER for object ~S and domain ~S, got: ~S"
+        (error "resolve-provider expected type PROVIDER for object of type ~S and domain ~S, got: ~S"
                (type-of object-of-interest)
                domain
                provider))))
