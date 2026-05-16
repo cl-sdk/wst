@@ -152,6 +152,7 @@ Example:
 
 (defun merge-evaluation-contexts (&rest contexts)
   "Merge context plists in argument order so later contexts override earlier keys.
+Key order in result plists is implementation-dependent.
 Example:
   (merge-evaluation-contexts '(:a 1 :shared :api) '(:b 2 :shared :client) '(:c 3 :shared :call))
   => (:a 1 :b 2 :c 3 :shared :call)"
@@ -259,8 +260,7 @@ Example:
 Example:
   (make-client :name \"checkout\" :domain \"payments\")
   => #S(FEATURE-FLAG-CLIENT ...)"
-  (make-feature-flag-client :name name
-                            :domain domain
+  (make-feature-flag-client :name name :domain domain
                             :evaluation-context (%ensure-context evaluation-context "client evaluation context")))
 
 (defun create-client (&key (name "client") domain evaluation-context)
