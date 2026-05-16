@@ -20,6 +20,7 @@ Behavior is built from pipelines and composition, where middleware and handlers 
 - Circuit breaker core and routing middleware integration
 - Accept-aware response selection helpers (`io.github.cl-sdk.wst.request-accept`)
 - W3C Trace Context propagation (`traceparent`/`tracestate`) with routing adapter (`io.github.cl-sdk.wst.trace-context`)
+- OpenFeature-style feature flags with core API/client/provider model and routing adapter (`io.github.cl-sdk.wst.openfeature`)
 
 Example route composition:
 
@@ -49,6 +50,57 @@ You can find the examples at:
 
 - [cl-sdk/wst-url-shortener-example](https://github.com/cl-sdk/wst-url-shortener-example)
 - [cl-sdk/wst-bookmark-example](https://github.com/cl-sdk/wst-bookmark-example)
+
+### openfeature architecture and scope
+
+The OpenFeature implementation is split into:
+
+- Core (`io.github.cl-sdk.wst.openfeature`): API state, providers, clients, evaluation context merge, typed evaluations, and evaluation details.
+- Routing adapter (`io.github.cl-sdk.wst.openfeature.routing`): request-scoped evaluation context injection and request-aware client composition.
+
+Current MVP scope:
+
+- API-level provider and per-domain provider registration.
+- Client creation with optional domain and client evaluation context.
+- Evaluation context merge precedence: API context -> client context -> invocation context.
+- Typed evaluations for boolean, string, number, and object.
+- Evaluation details including reason and error metadata.
+- Default/no-op provider fallback behavior.
+
+### provider lifecycle and contract
+
+Provider authors implement one or more typed resolver generics:
+
+- `resolve-boolean-details`
+- `resolve-string-details`
+- `resolve-number-details`
+- `resolve-object-details`
+
+Optional lifecycle generics:
+
+- `initialize-provider`
+- `shutdown-provider`
+
+A provider returns `evaluation-details` objects with at least a `value`, and optionally `variant`, `reason`, `error-code`, `error-message`, and `metadata`.
+
+### routing usage
+
+Use `wrap-openfeature-context` as a `:before` middleware to inject request-scoped evaluation context into `request-data`.
+
+Use `client-for-request` to build a client whose context includes request-scoped values plus any explicit client/request invocation context.
+
+### constraints
+
+- Core package has zero routing dependency.
+- Routing concerns are isolated in `io.github.cl-sdk.wst.openfeature.routing`.
+- Context handling is explicit (plists only), with deterministic precedence.
+
+### phase 2+ roadmap
+
+- Hooks pipeline (`before` / `after` / `error` / `finally`) with immutable context transition rules.
+- Provider status/events and richer lifecycle management.
+- Extended propagation patterns (transaction/request integrations).
+- Optional advanced additions like tracking and structured diagnostics.
 
 # license
 

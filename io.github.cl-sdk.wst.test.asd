@@ -14,4 +14,6 @@
                #:io.github.cl-sdk.wst.request-content.routing.test
                #:io.github.cl-sdk.wst.request-accept.test
                #:io.github.cl-sdk.wst.trace-context.test
-               #:io.github.cl-sdk.wst.trace-context.routing.test))
+               #:io.github.cl-sdk.wst.trace-context.routing.test
+               #:io.github.cl-sdk.wst.openfeature.test
+               #:io.github.cl-sdk.wst.openfeature.routing.test))
