@@ -236,21 +236,25 @@ All examples below assume:
   ```lisp
   (let ((client (create-client)))
     (get-boolean-value client "beta-flag" nil))
+  ;; => T or NIL (provider-dependent)
   ```
 - `get-string-value`
   ```lisp
   (let ((client (create-client)))
     (get-string-value client "variant" "control"))
+  ;; => "control" or provider-returned string
   ```
 - `get-number-value`
   ```lisp
   (let ((client (create-client)))
     (get-number-value client "max-items" 10))
+  ;; => 10 or provider-returned number
   ```
 - `get-object-value`
   ```lisp
   (let ((client (create-client)))
     (get-object-value client "config" '(:enabled nil)))
+  ;; => (:enabled nil) or provider-returned object
   ```
 - `get-boolean-details`
   ```lisp
