@@ -240,7 +240,7 @@ Example:
                     :error-message "Provider does not implement object resolution."))
 
 (defun reset-feature-flag ()
-  "Reset global feature-flag API context.
+  "Reset global API evaluation context.
 Example:
   (reset-feature-flag)
   => NIL"
