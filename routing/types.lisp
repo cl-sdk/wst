@@ -23,6 +23,13 @@ Slots:
   content
   (data nil :type list))
 
+(declaim (ftype (function (request string &optional string) (or null string))
+                request-header))
+(defun request-header (request header-name &optional default-value)
+  "Return the value of HEADER-NAME from REQUEST headers hash table."
+  (or (gethash header-name (request-headers request))
+     default-value))
+
 (defstruct response
   "Structure representing an HTTP response.
 

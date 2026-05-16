@@ -41,6 +41,7 @@
    #:request-uri
    #:request-query
    #:request-method
+   #:request-header
    #:request-headers
    #:request-content
    #:request-content-type
