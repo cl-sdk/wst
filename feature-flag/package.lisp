@@ -292,3 +292,188 @@ Planned for later phases:
 (defun get-object-value (client flag-key default-value &key evaluation-context)
   (evaluation-details-value
    (get-object-details client flag-key default-value :evaluation-context evaluation-context)))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (dolist (entry
+           '((provider-name
+              . "Return provider name.
+Example:
+  (provider-name (make-instance 'provider :name \"demo\"))
+  => \"demo\"")
+             (provider-metadata
+              . "Return provider metadata plist.
+Example:
+  (provider-metadata (make-instance 'provider :name \"demo\"))
+  => (:name \"demo\")")
+             (initialize-provider
+              . "Initialize provider lifecycle.
+Example:
+  (initialize-provider (make-instance 'provider :name \"demo\"))
+  => #<PROVIDER ...>")
+             (shutdown-provider
+              . "Shutdown provider lifecycle.
+Example:
+  (shutdown-provider (make-instance 'provider :name \"demo\"))
+  => #<PROVIDER ...>")
+             (resolve-boolean-details
+              . "Resolve boolean evaluation details.
+Example:
+  (resolve-boolean-details provider \"beta\" nil '(:user-id \"u1\"))
+  => #S(EVALUATION-DETAILS ...)")
+             (resolve-string-details
+              . "Resolve string evaluation details.
+Example:
+  (resolve-string-details provider \"variant\" \"control\" '(:user-id \"u1\"))
+  => #S(EVALUATION-DETAILS ...)")
+             (resolve-number-details
+              . "Resolve number evaluation details.
+Example:
+  (resolve-number-details provider \"max-items\" 10 '(:user-id \"u1\"))
+  => #S(EVALUATION-DETAILS ...)")
+             (resolve-object-details
+              . "Resolve object evaluation details.
+Example:
+  (resolve-object-details provider \"config\" '(:enabled nil) '(:user-id \"u1\"))
+  => #S(EVALUATION-DETAILS ...)")
+             (feature-flag-client-name
+              . "Return client name.
+Example:
+  (feature-flag-client-name (create-client :name \"checkout\"))
+  => \"checkout\"")
+             (feature-flag-client-domain
+              . "Return client domain.
+Example:
+  (feature-flag-client-domain (create-client :domain \"payments\"))
+  => \"payments\"")
+             (feature-flag-client-evaluation-context
+              . "Return client evaluation context.
+Example:
+  (feature-flag-client-evaluation-context
+   (create-client :evaluation-context '(:app \"checkout\")))
+  => (:app \"checkout\")")
+             (make-client
+              . "Create a feature-flag client.
+Example:
+  (make-client :name \"checkout\" :domain \"payments\")
+  => #S(FEATURE-FLAG-CLIENT ...)")
+             (create-client
+              . "Create a feature-flag client (alias of MAKE-CLIENT).
+Example:
+  (create-client :name \"checkout\")
+  => #S(FEATURE-FLAG-CLIENT ...)")
+             (set-provider
+              . "Set provider globally or for a domain.
+Example:
+  (set-provider (make-instance 'noop-provider :name \"default\") :domain \"payments\")
+  => #<NOOP-PROVIDER ...>")
+             (get-provider
+              . "Get provider for domain or default provider.
+Example:
+  (get-provider \"payments\")
+  => #<PROVIDER ...>")
+             (set-evaluation-context
+              . "Set global API evaluation context.
+Example:
+  (set-evaluation-context '(:region \"eu\"))
+  => (:region \"eu\")")
+             (get-evaluation-context
+              . "Get global API evaluation context.
+Example:
+  (get-evaluation-context)
+  => (:region \"eu\")")
+             (merge-evaluation-contexts
+              . "Merge plist contexts left-to-right (later values win).
+Example:
+  (merge-evaluation-contexts '(:a 1 :shared :api) '(:shared :client :b 2))
+  => (:a 1 :shared :client :b 2)")
+             (make-evaluation-details
+              . "Create an evaluation-details record.
+Example:
+  (make-evaluation-details :flag-key \"beta\" :value t :reason *reason-static*)
+  => #S(EVALUATION-DETAILS ...)")
+             (evaluation-details-flag-key
+              . "Return the evaluated flag key.
+Example:
+  (evaluation-details-flag-key (make-evaluation-details :flag-key \"beta\" :value t))
+  => \"beta\"")
+             (evaluation-details-value
+              . "Return evaluated value.
+Example:
+  (evaluation-details-value (make-evaluation-details :flag-key \"beta\" :value t))
+  => T")
+             (evaluation-details-variant
+              . "Return evaluated variant.
+Example:
+  (evaluation-details-variant
+   (make-evaluation-details :flag-key \"beta\" :value t :variant \"on\"))
+  => \"on\"")
+             (evaluation-details-reason
+              . "Return evaluation reason.
+Example:
+  (evaluation-details-reason
+   (make-evaluation-details :flag-key \"beta\" :value t :reason *reason-static*))
+  => :STATIC")
+             (evaluation-details-error-code
+              . "Return evaluation error code.
+Example:
+  (evaluation-details-error-code
+   (make-evaluation-details :flag-key \"beta\" :value nil :error-code *error-general*))
+  => :GENERAL")
+             (evaluation-details-error-message
+              . "Return evaluation error message.
+Example:
+  (evaluation-details-error-message
+   (make-evaluation-details :flag-key \"beta\" :value nil :error-message \"boom\"))
+  => \"boom\"")
+             (evaluation-details-metadata
+              . "Return evaluation metadata plist.
+Example:
+  (evaluation-details-metadata
+   (make-evaluation-details :flag-key \"beta\" :value t :metadata '(:source \"cache\")))
+  => (:source \"cache\")")
+             (get-boolean-value
+              . "Get boolean flag value.
+Example:
+  (get-boolean-value (create-client) \"beta\" nil)
+  => T or NIL")
+             (get-string-value
+              . "Get string flag value.
+Example:
+  (get-string-value (create-client) \"variant\" \"control\")
+  => \"control\" or provider-returned string")
+             (get-number-value
+              . "Get number flag value.
+Example:
+  (get-number-value (create-client) \"max-items\" 10)
+  => 10 or provider-returned number")
+             (get-object-value
+              . "Get object flag value.
+Example:
+  (get-object-value (create-client) \"config\" '(:enabled nil))
+  => (:enabled nil) or provider-returned object")
+             (get-boolean-details
+              . "Get boolean flag evaluation details.
+Example:
+  (get-boolean-details (create-client) \"beta\" nil)
+  => #S(EVALUATION-DETAILS ...)")
+             (get-string-details
+              . "Get string flag evaluation details.
+Example:
+  (get-string-details (create-client) \"variant\" \"control\")
+  => #S(EVALUATION-DETAILS ...)")
+             (get-number-details
+              . "Get number flag evaluation details.
+Example:
+  (get-number-details (create-client) \"max-items\" 10)
+  => #S(EVALUATION-DETAILS ...)")
+             (get-object-details
+              . "Get object flag evaluation details.
+Example:
+  (get-object-details (create-client) \"config\" '(:enabled nil))
+  => #S(EVALUATION-DETAILS ...)")
+             (reset-feature-flag
+              . "Reset global feature-flag state.
+Example:
+  (reset-feature-flag)
+  => NIL")))
+    (setf (documentation (car entry) 'function) (cdr entry))))
