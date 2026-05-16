@@ -278,9 +278,9 @@ Example:
 
 (defun %evaluate-details (client kind flag-key default-value invocation-context)
   (let* ((provider (%resolve-provider client))
-          (context (merge-evaluation-contexts
-                    (feature-flag-client-evaluation-context client)
-                    invocation-context))
+         (context (merge-evaluation-contexts
+                   (feature-flag-client-evaluation-context client)
+                   invocation-context))
          (resolver (%resolver-for-kind kind)))
     (handler-case
         (let ((details (funcall resolver provider flag-key default-value context)))
