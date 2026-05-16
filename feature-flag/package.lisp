@@ -147,7 +147,7 @@ Example:
   object-of-interest
   (evaluation-context nil :type list))
 
-(defparameter *fallback-provider* (make-instance 'noop-provider :name "noop"))
+(defparameter *default-provider* (make-instance 'noop-provider :name "noop"))
 (defparameter *api-evaluation-context* nil)
 
 (defun %plist-even-p (plist)
@@ -197,7 +197,7 @@ Example:
 
 (defmethod resolve-provider ((object-of-interest t) domain)
   (declare (ignore object-of-interest domain))
-  *fallback-provider*)
+  *default-provider*)
 
 (defun %default-details (flag-key default-value &key
                           (reason *reason-default*)
@@ -241,7 +241,7 @@ Example:
 
 (defun reset-feature-flag ()
   "Reset only the global API evaluation context.
-This function keeps the broader name for API compatibility with previous releases.
+Unlike previous revisions, this no longer resets provider mappings because provider state is user-managed.
 Example:
   (reset-feature-flag) ; clears the value set by SET-EVALUATION-CONTEXT
   => NIL"
