@@ -147,7 +147,7 @@ Example:
   object-of-interest
   (evaluation-context nil :type list))
 
-(defparameter *noop-provider* (make-instance 'noop-provider :name "noop"))
+(defparameter *fallback-provider* (make-instance 'noop-provider :name "noop"))
 (defparameter *api-evaluation-context* nil)
 
 (defun %plist-even-p (plist)
@@ -197,7 +197,7 @@ Example:
 
 (defmethod resolve-provider ((object-of-interest t) domain)
   (declare (ignore object-of-interest domain))
-  *noop-provider*)
+  *fallback-provider*)
 
 (defun %default-details (flag-key default-value &key
                           (reason *reason-default*)
@@ -269,7 +269,7 @@ Example:
                                     (feature-flag-client-domain client))))
     (if (typep provider 'provider)
         provider
-        *noop-provider*)))
+        (error "RESOLVE-PROVIDER must return a PROVIDER, got: ~S" provider))))
 
 (defun %type-ok-p (kind value)
   (case kind
@@ -287,14 +287,14 @@ Example:
     (:object #'resolve-object-details)))
 
 (defun %evaluate-details (client kind flag-key default-value invocation-context)
-  (let* ((provider (%resolve-provider client))
-         (context (merge-evaluation-contexts
+  (let* ((context (merge-evaluation-contexts
                    *api-evaluation-context*
                    (feature-flag-client-evaluation-context client)
                    invocation-context))
          (resolver (%resolver-for-kind kind)))
     (handler-case
-        (let ((details (funcall resolver provider flag-key default-value context)))
+        (let* ((provider (%resolve-provider client))
+               (details (funcall resolver provider flag-key default-value context)))
           (if (and (typep details 'evaluation-details)
                    (%type-ok-p kind (evaluation-details-value details)))
               details

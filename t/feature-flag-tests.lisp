@@ -75,15 +75,15 @@
   (error "provider exploded"))
 
 (defclass lifecycle-provider (provider)
-  ((initialize-called-p :accessor lifecycle-provider-initialize-called-p :initform nil)
-   (shutdown-called-p :accessor lifecycle-provider-shutdown-called-p :initform nil)))
+  ((initialize-called-p :accessor initialize-called-p :initform nil)
+   (shutdown-called-p :accessor shutdown-called-p :initform nil)))
 
 (defmethod initialize-provider ((provider lifecycle-provider))
-  (setf (lifecycle-provider-initialize-called-p provider) t)
+  (setf (initialize-called-p provider) t)
   provider)
 
 (defmethod shutdown-provider ((provider lifecycle-provider))
-  (setf (lifecycle-provider-shutdown-called-p provider) t)
+  (setf (shutdown-called-p provider) t)
   provider)
 
 (defclass provider-holder ()
@@ -117,8 +117,8 @@
   (with-feature-flag-reset
     (let ((provider (make-instance 'lifecycle-provider :name "lifecycle")))
       (resolve-provider (make-instance 'provider-holder :default-provider provider) nil)
-      (is-false (lifecycle-provider-initialize-called-p provider))
-      (is-false (lifecycle-provider-shutdown-called-p provider)))))
+      (is-false (initialize-called-p provider))
+      (is-false (shutdown-called-p provider)))))
 
 (test evaluation-context-merges-api-client-and-invocation-with-right-precedence
   (with-feature-flag-reset
