@@ -382,7 +382,7 @@ Example:
   (get-evaluation-context)
   => (:region \"eu\")")
              (merge-evaluation-contexts
-              . "Merge plist contexts left-to-right (later values win). Key order in result plists is implementation-dependent.
+              . "Merge plist contexts in argument order; later context arguments override earlier keys. Key order in result plists is implementation-dependent.
 Example:
   (merge-evaluation-contexts '(:a 1 :shared :api) '(:shared :client :b 2))
   => (:a 1 :b 2 :shared :client)")
