@@ -126,7 +126,7 @@ Planned for later phases:
 
 (defun %ensure-context (context where)
   (unless (%plist-even-p context)
-    (error "~a must be a plist (even-length list)." where))
+    (error "~A must be a plist (even-length list)." where))
   context)
 
 (defun merge-evaluation-contexts (&rest contexts)

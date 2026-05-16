@@ -9,7 +9,9 @@
 (in-package #:io.github.cl-sdk.wst.openfeature.routing)
 
 (defun wrap-openfeature-context (&key
-                                   (context-fn (lambda (_request) nil))
+                                   (context-fn (lambda (request)
+                                                 (declare (ignore request))
+                                                 nil))
                                    (request-data-key :openfeature-evaluation-context))
   "Create a before-middleware that injects request-scoped OpenFeature context."
   (check-type request-data-key keyword)

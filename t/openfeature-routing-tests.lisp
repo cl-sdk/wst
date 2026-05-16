@@ -28,8 +28,8 @@
   (let* ((request (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))
          (response (io.github.cl-sdk.wst.routing:make-response))
          (middleware (wrap-openfeature-context
-                      :context-fn (lambda (_request)
-                                    (declare (ignore _request))
+                      :context-fn (lambda (request)
+                                    (declare (ignore request))
                                     '(:tenant "acme" :plan "pro"))))
          (result (funcall middleware request response)))
     (is (eq :continue (car result)))
@@ -42,8 +42,8 @@
            (request (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))
            (response (io.github.cl-sdk.wst.routing:make-response))
            (middleware (wrap-openfeature-context
-                        :context-fn (lambda (_request)
-                                      (declare (ignore _request))
+                        :context-fn (lambda (request)
+                                      (declare (ignore request))
                                       '(:tenant "acme" :shared :request)))))
       (set-provider provider)
       (funcall middleware request response)
