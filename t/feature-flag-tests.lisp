@@ -113,7 +113,7 @@
       (is (eq *reason-error* (evaluation-details-reason details)))
       (is (eq *error-general* (evaluation-details-error-code details))))))
 
-(test provider-resolution-does-not-manage-provider-lifecycle
+(test resolve-provider-does-not-call-lifecycle-methods
   (with-feature-flag-reset
     (let ((provider (make-instance 'lifecycle-provider :name "lifecycle")))
       (resolve-provider (make-instance 'provider-holder :default-provider provider) nil)

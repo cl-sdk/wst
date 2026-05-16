@@ -269,7 +269,7 @@ Example:
                                     (feature-flag-client-domain client))))
     (if (typep provider 'provider)
         provider
-        (error "RESOLVE-PROVIDER must return a PROVIDER, got: ~S" provider))))
+        (error "resolve-provider must return a provider, got: ~S" provider))))
 
 (defun %type-ok-p (kind value)
   (case kind
