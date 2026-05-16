@@ -226,6 +226,7 @@ Example:
 (defun reset-feature-flag ()
   "No-op compatibility function.
 Provider selection and evaluation context state are user-managed.
+Previously this reset global API evaluation context, which no longer exists.
 Example:
   (reset-feature-flag)
   => NIL"
