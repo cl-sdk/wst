@@ -240,9 +240,9 @@ Example:
                     :error-message "Provider does not implement object resolution."))
 
 (defun reset-feature-flag ()
-  "Reset global API evaluation context.
+  "Reset only the global API evaluation context.
 Example:
-  (reset-feature-flag)
+  (reset-feature-flag) ; clears the value set by SET-EVALUATION-CONTEXT
   => NIL"
   (setf *api-evaluation-context* nil))
 
@@ -265,11 +265,15 @@ Example:
                :evaluation-context evaluation-context))
 
 (defun %resolve-provider (client)
-  (let ((provider (resolve-provider (feature-flag-client-object-of-interest client)
-                                    (feature-flag-client-domain client))))
+  (let* ((object-of-interest (feature-flag-client-object-of-interest client))
+         (domain (feature-flag-client-domain client))
+         (provider (resolve-provider object-of-interest domain)))
     (if (typep provider 'provider)
         provider
-        (error "resolve-provider must return a provider, got: ~S" provider))))
+        (error "resolve-provider must return a provider for object ~S and domain ~S, got: ~S"
+               object-of-interest
+               domain
+               provider))))
 
 (defun %type-ok-p (kind value)
   (case kind
