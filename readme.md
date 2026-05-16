@@ -298,8 +298,9 @@ All examples below assume:
   (defparameter *middleware*
     (wrap-feature-flag-context
      :context-fn (lambda (request)
-                   (declare (ignore request))
-                   '(:tenant "acme" :plan "pro"))))
+                   (let ((tenant (or (getf (io.github.cl-sdk.wst.routing:request-data request) :tenant)
+                                     "acme")))
+                     (list :tenant tenant :plan "pro")))))
   ```
 - `feature-flag-context-of`
   ```lisp
