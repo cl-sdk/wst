@@ -50,7 +50,7 @@ Example:
                  (list :tenant (getf (io.github.cl-sdk.wst.routing:request-data request) :tenant))))
   => #<FUNCTION ...>")
              (feature-flag-context-of
-              . "Read request-scoped feature-flag context from request-data using REQUEST-DATA-KEY (default :FEATURE-FLAG-EVALUATION-CONTEXT). Returns NIL when that key is not present.
+              . "Read request-scoped feature-flag context from request-data using the optional :REQUEST-DATA-KEY argument (default :FEATURE-FLAG-EVALUATION-CONTEXT). Returns NIL when that key is not present.
 Example:
   (feature-flag-context-of request)
   => (:tenant \"acme\" :plan \"pro\") or NIL")

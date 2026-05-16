@@ -384,8 +384,8 @@ Example:
              (merge-evaluation-contexts
               . "Merge plist contexts in argument order; later context arguments override earlier keys. Key order in result plists is implementation-dependent.
 Example:
-  (merge-evaluation-contexts '(:a 1 :shared :api) '(:shared :client :b 2))
-  => (:a 1 :b 2 :shared :client)")
+  (merge-evaluation-contexts '(:a 1 :shared :api) '(:b 2 :shared :client) '(:c 3 :shared :call))
+  => (:a 1 :b 2 :c 3 :shared :call)")
              (make-evaluation-details
               . "Create an evaluation-details record.
 Example:
