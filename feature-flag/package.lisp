@@ -15,7 +15,6 @@ Planned for later phases:
 - Extended lifecycle and transaction/request propagation")
   (:export
    #:provider
-   #:noop-provider
    #:provider-name
    #:provider-metadata
    #:initialize-provider
@@ -72,9 +71,6 @@ Planned for later phases:
 (defclass provider ()
   ((name :initarg :name :accessor provider-name :initform "provider"))
   (:documentation "Base provider protocol class."))
-
-(defclass noop-provider (provider) ()
-  (:documentation "Default provider that always returns fallback values."))
 
 (defgeneric provider-metadata (provider)
   (:documentation "Return metadata for PROVIDER as a plist.
@@ -144,8 +140,6 @@ Example:
   domain
   object-of-interest
   (evaluation-context nil :type list))
-
-(defparameter *default-provider* (make-instance 'noop-provider :name "noop"))
 
 (defun %plist-even-p (plist)
   (and (listp plist)
