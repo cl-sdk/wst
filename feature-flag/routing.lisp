@@ -44,15 +44,17 @@ Example:
                                         (request-data-key :feature-flag-evaluation-context))
   "Create a feature-flag client composed with request-scoped context.
 OBJECT-OF-INTEREST defaults to REQUEST and is used by RESOLVE-PROVIDER.
+NAME is accepted for backward compatibility and currently unused.
 Example:
   (client-for-request request :domain \"payments\" :evaluation-context '(:app \"checkout\"))
-  => #S(FEATURE-FLAG-CLIENT ...)"
+  => #<CLIENT ...>"
   (declare (ignore name))
   (let* ((resolved-domain (or domain "default"))
          (provider (resolve-provider object-of-interest resolved-domain))
-         (client (acquire-client provider :domain resolved-domain)))
-    (setf (slot-value client 'io.github.cl-sdk.wst.feature-flag::evaluation-context)
-          (merge-evaluation-contexts
-           evaluation-context
-           (feature-flag-context-of request :request-data-key request-data-key)))
-    client))
+         (context (merge-evaluation-contexts
+                   evaluation-context
+                   (feature-flag-context-of request :request-data-key request-data-key))))
+    (make-instance 'client
+                   :provider provider
+                   :domain resolved-domain
+                   :client-evaluation-context context)))

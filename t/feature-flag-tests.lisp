@@ -93,8 +93,8 @@
     (make-instance 'client :provider provider :domain domain)))
 
 (defmethod resolve-provider ((holder provider-holder) domain)
-  (declare (ignore domain))
-  (provider-holder-default-provider holder))
+  (or (and domain (cdr (assoc domain (provider-holder-domain-providers holder) :test #'equal)))
+      (provider-holder-default-provider holder)))
 
 (test provider-without-resolver-returns-default-and-provider-not-ready-error
   (let* ((client (acquire-client (make-instance 'provider :name "base")))
