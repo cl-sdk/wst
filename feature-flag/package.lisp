@@ -19,17 +19,13 @@ Planned for later phases:
    #:provider-metadata
    #:initialize-provider
    #:shutdown-provider
+   #:client
+   #:client-name
    #:resolve-boolean-details
    #:resolve-string-details
    #:resolve-number-details
    #:resolve-object-details
-   #:feature-flag-client
-   #:feature-flag-client-name
-   #:feature-flag-client-domain
-   #:feature-flag-client-object-of-interest
-   #:feature-flag-client-evaluation-context
-   #:make-client
-   #:create-client
+   #:acquire-client
    #:resolve-provider
    #:merge-evaluation-contexts
    #:evaluation-details
@@ -68,6 +64,14 @@ Planned for later phases:
 (defparameter *error-type-mismatch* :type-mismatch)
 (defparameter *error-general* :general)
 
+(defgeneric resolve-provider (object domain)
+  (:documentation "Resolve provider for OBJECT and DOMAIN.
+Users should implement this generic to select the correct provider from app/request state.
+Default method fallback returns a noop provider when no specialized method exists.
+Example:
+  (resolve-provider request \"payments\")
+  => #<PROVIDER ...>"))
+
 (defgeneric provider-metadata (provider)
   (:documentation "Return metadata for PROVIDER as a plist.
 Example:
@@ -88,13 +92,9 @@ Example:
   (shutdown-provider (make-instance 'provider :name \"demo\"))
   => #<PROVIDER ...>"))
 
-(defgeneric resolve-provider (object-of-interest domain)
-  (:documentation "Resolve provider for OBJECT-OF-INTEREST and DOMAIN.
-Users should implement this generic to select the correct provider from app/request state.
-Default method fallback returns a noop provider when no specialized method exists.
-Example:
-  (resolve-provider request \"payments\")
-  => #<PROVIDER ...>"))
+(defgeneric acquire-client (provider &key domain)
+  (:documentation "Return a client from a PROVIDER. Users are responsible
+for what `acquire` means."))
 
 (defgeneric resolve-boolean-details (provider flag-key default-value evaluation-context)
   (:documentation "Resolve boolean flag details.
@@ -121,8 +121,22 @@ Example:
   => #S(EVALUATION-DETAILS ...)"))
 
 (defclass provider ()
-  ((name :initarg :name :accessor provider-name :initform "provider"))
+  ((name :initarg :name :accessor provider-name :initform (error "provider.name is required.")))
   (:documentation "Base provider protocol class."))
+
+(defclass client ()
+  ((provider :type provider
+             :initarg :provider
+             :accessor client-provider
+             :initform (error "client.provider is required."))
+   (domain :type string
+           :initarg :domain
+           :accessor client-domain
+           :initform (error "client.domain is required."))
+   (evaluation-context :type list
+                       :initarg :client-evaluation-context
+                       :initform nil))
+  (:documentation "Base provider's client class."))
 
 (defstruct evaluation-details
   "Evaluation detail record for feature-flag metadata."
@@ -133,13 +147,6 @@ Example:
   error-code
   error-message
   metadata)
-
-(defstruct feature-flag-client
-  "A client has optional DOMAIN, OBJECT-OF-INTEREST and per-client EVALUATION-CONTEXT."
-  (name "client" :type string)
-  domain
-  object-of-interest
-  (evaluation-context nil :type list))
 
 (defun %plist-even-p (plist)
   (and (listp plist)
@@ -185,10 +192,6 @@ Example:
 (defmethod shutdown-provider ((provider provider))
   provider)
 
-(defmethod resolve-provider ((object-of-interest t) domain)
-  (declare (ignore object-of-interest domain))
-  *default-provider*)
-
 (defmethod resolve-boolean-details ((provider provider) flag-key default-value evaluation-context)
   (declare (ignore provider evaluation-context))
   (%default-details flag-key default-value
@@ -217,35 +220,6 @@ Example:
                     :error-code *error-provider-not-ready*
                     :error-message "Provider does not implement object resolution."))
 
-(defun make-client (&key (name "client") domain object-of-interest evaluation-context)
-  "Create a feature-flag client.
-Example:
-  (make-client :name \"checkout\" :domain \"payments\" :object-of-interest request)
-  => #S(FEATURE-FLAG-CLIENT ...)"
-  (make-feature-flag-client :name name :domain domain
-                             :object-of-interest object-of-interest
-                             :evaluation-context (%ensure-context evaluation-context "client evaluation context")))
-
-(defun create-client (&key (name "client") domain object-of-interest evaluation-context)
-  "Create a feature-flag client (alias of MAKE-CLIENT).
-Example:
-  (create-client :name \"checkout\")
-  => #S(FEATURE-FLAG-CLIENT ...)"
-  (make-client :name name :domain domain
-               :object-of-interest object-of-interest
-               :evaluation-context evaluation-context))
-
-(defun %resolve-provider (client)
-  (let* ((object-of-interest (feature-flag-client-object-of-interest client))
-         (domain (feature-flag-client-domain client))
-         (provider (resolve-provider object-of-interest domain)))
-    (if (typep provider 'provider)
-        provider
-        (error "resolve-provider expected type PROVIDER for object of type ~S and domain ~S, got: ~S"
-               (type-of object-of-interest)
-               domain
-               provider))))
-
 (defun %type-ok-p (kind value)
   (case kind
     (:boolean (or (eq value t) (null value)))
@@ -262,15 +236,15 @@ Example:
     (:object #'resolve-object-details)))
 
 (defun %evaluate-details (client kind flag-key default-value invocation-context)
-  (let* ((provider (%resolve-provider client))
+  (let* ((provider (client-provider client))
          (context (merge-evaluation-contexts
-                   (feature-flag-client-evaluation-context client)
+                   (slot-value client 'evaluation-context)
                    invocation-context))
          (resolver (%resolver-for-kind kind)))
     (handler-case
         (let ((details (funcall resolver provider flag-key default-value context)))
           (if (and (typep details 'evaluation-details)
-                   (%type-ok-p kind (evaluation-details-value details)))
+                 (%type-ok-p kind (evaluation-details-value details)))
               details
               (%default-details flag-key default-value
                                 :reason *reason-error*
@@ -285,35 +259,35 @@ Example:
 (defun get-boolean-details (client flag-key default-value &key evaluation-context)
   "Get boolean flag evaluation details.
 Example:
-  (get-boolean-details (create-client) \"beta\" nil)
+  (get-boolean-details (acquire-client provider) \"beta\" nil)
   => #S(EVALUATION-DETAILS ...)"
   (%evaluate-details client :boolean flag-key default-value evaluation-context))
 
 (defun get-string-details (client flag-key default-value &key evaluation-context)
   "Get string flag evaluation details.
 Example:
-  (get-string-details (create-client) \"variant\" \"control\")
+  (get-string-details (acquire-client provider) \"variant\" \"control\")
   => #S(EVALUATION-DETAILS ...)"
   (%evaluate-details client :string flag-key default-value evaluation-context))
 
 (defun get-number-details (client flag-key default-value &key evaluation-context)
   "Get number flag evaluation details.
 Example:
-  (get-number-details (create-client) \"max-items\" 10)
+  (get-number-details (acquire-client provider) \"max-items\" 10)
   => #S(EVALUATION-DETAILS ...)"
   (%evaluate-details client :number flag-key default-value evaluation-context))
 
 (defun get-object-details (client flag-key default-value &key evaluation-context)
   "Get object flag evaluation details.
 Example:
-  (get-object-details (create-client) \"config\" '(:enabled nil))
+  (get-object-details (acquire-client provider) \"config\" '(:enabled nil))
   => #S(EVALUATION-DETAILS ...)"
   (%evaluate-details client :object flag-key default-value evaluation-context))
 
 (defun get-boolean-value (client flag-key default-value &key evaluation-context)
   "Get boolean flag value.
 Example:
-  (get-boolean-value (create-client) \"beta\" nil)
+  (get-boolean-value (acquire-client provider) \"beta\" nil)
   => T or NIL"
   (evaluation-details-value
    (get-boolean-details client flag-key default-value :evaluation-context evaluation-context)))
@@ -321,7 +295,7 @@ Example:
 (defun get-string-value (client flag-key default-value &key evaluation-context)
   "Get string flag value.
 Example:
-  (get-string-value (create-client) \"variant\" \"control\")
+  (get-string-value (acquire-client provider) \"variant\" \"control\")
   => \"control\" or provider-returned string"
   (evaluation-details-value
    (get-string-details client flag-key default-value :evaluation-context evaluation-context)))
@@ -329,7 +303,7 @@ Example:
 (defun get-number-value (client flag-key default-value &key evaluation-context)
   "Get number flag value.
 Example:
-  (get-number-value (create-client) \"max-items\" 10)
+  (get-number-value (acquire-client provider) \"max-items\" 10)
   => 10 or provider-returned number"
   (evaluation-details-value
    (get-number-details client flag-key default-value :evaluation-context evaluation-context)))
@@ -337,7 +311,7 @@ Example:
 (defun get-object-value (client flag-key default-value &key evaluation-context)
   "Get object flag value.
 Example:
-  (get-object-value (create-client) \"config\" '(:enabled nil))
+  (get-object-value (acquire-client provider) \"config\" '(:enabled nil))
   => (:enabled nil) or provider-returned object"
   (evaluation-details-value
    (get-object-details client flag-key default-value :evaluation-context evaluation-context)))
