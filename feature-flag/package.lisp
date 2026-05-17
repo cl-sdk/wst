@@ -68,10 +68,6 @@ Planned for later phases:
 (defparameter *error-type-mismatch* :type-mismatch)
 (defparameter *error-general* :general)
 
-(defclass provider ()
-  ((name :initarg :name :accessor provider-name :initform "provider"))
-  (:documentation "Base provider protocol class."))
-
 (defgeneric provider-metadata (provider)
   (:documentation "Return metadata for PROVIDER as a plist.
 Example:
@@ -124,6 +120,10 @@ Example:
   (resolve-object-details provider \"config\" '(:enabled nil) '(:user-id \"u1\"))
   => #S(EVALUATION-DETAILS ...)"))
 
+(defclass provider ()
+  ((name :initarg :name :accessor provider-name :initform "provider"))
+  (:documentation "Base provider protocol class."))
+
 (defstruct evaluation-details
   "Evaluation detail record for feature-flag metadata."
   flag-key
@@ -164,6 +164,18 @@ Example:
         (loop :for (key value) :on context :by #'cddr
               :do (setf (getf result key) value))))))
 
+(defun %default-details (flag-key default-value &key
+                          (reason *reason-default*)
+                          error-code
+                          error-message
+                          metadata)
+  (make-evaluation-details :flag-key flag-key
+                           :value default-value
+                           :reason reason
+                           :error-code error-code
+                           :error-message error-message
+                           :metadata metadata))
+
 (defmethod provider-metadata ((provider provider))
   (list :name (provider-name provider)))
 
@@ -176,18 +188,6 @@ Example:
 (defmethod resolve-provider ((object-of-interest t) domain)
   (declare (ignore object-of-interest domain))
   *default-provider*)
-
-(defun %default-details (flag-key default-value &key
-                          (reason *reason-default*)
-                          error-code
-                          error-message
-                          metadata)
-  (make-evaluation-details :flag-key flag-key
-                           :value default-value
-                           :reason reason
-                           :error-code error-code
-                           :error-message error-message
-                           :metadata metadata))
 
 (defmethod resolve-boolean-details ((provider provider) flag-key default-value evaluation-context)
   (declare (ignore provider evaluation-context))
