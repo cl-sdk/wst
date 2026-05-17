@@ -8,13 +8,6 @@
 (def-suite feature-flag-routing-suite)
 (in-suite feature-flag-routing-suite)
 
-(defmacro with-feature-flag-reset (&body body)
-  `(unwind-protect
-        (progn
-          (reset-feature-flag)
-          ,@body)
-     (reset-feature-flag)))
-
 (defclass context-capturing-provider (provider)
   ((last-context :accessor provider-last-context :initform nil)))
 
@@ -28,6 +21,9 @@
   (declare (ignore domain))
   (or (getf (io.github.cl-sdk.wst.routing:request-data request) :feature-flag-provider)
       (call-next-method)))
+
+(defmethod acquire-client ((provider context-capturing-provider) &key (domain "default"))
+  (make-instance 'client :provider provider :domain domain))
 
 (test middleware-injects-request-scoped-context
   (let* ((request (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))
@@ -43,21 +39,20 @@
       (is (string= "pro" (getf context :plan))))))
 
 (test client-for-request-composes-request-scoped-context-into-client-context
-  (with-feature-flag-reset
-    (let* ((provider (make-instance 'context-capturing-provider :name "capture"))
-           (request (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))
-           (response (io.github.cl-sdk.wst.routing:make-response))
-           (middleware (wrap-feature-flag-context
-                        :context-fn (lambda (request)
-                                      (declare (ignore request))
-                                      '(:tenant "acme" :shared :request)))))
-      (setf (io.github.cl-sdk.wst.routing:request-data request)
-            (append (io.github.cl-sdk.wst.routing:request-data request)
-                    (list :feature-flag-provider provider)))
-      (funcall middleware request response)
-      (let ((client (client-for-request request :evaluation-context '(:shared :client :app "shop"))))
-        (is-false (get-boolean-value client "flag-a" nil :evaluation-context '(:shared :call)))
-        (let ((ctx (provider-last-context provider)))
-          (is (string= "acme" (getf ctx :tenant)))
-          (is (string= "shop" (getf ctx :app)))
-          (is (eq :call (getf ctx :shared))))))))
+  (let* ((provider (make-instance 'context-capturing-provider :name "capture"))
+         (request (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))
+         (response (io.github.cl-sdk.wst.routing:make-response))
+         (middleware (wrap-feature-flag-context
+                      :context-fn (lambda (request)
+                                    (declare (ignore request))
+                                    '(:tenant "acme" :shared :request)))))
+    (setf (io.github.cl-sdk.wst.routing:request-data request)
+          (append (io.github.cl-sdk.wst.routing:request-data request)
+                  (list :feature-flag-provider provider)))
+    (funcall middleware request response)
+    (let ((client (client-for-request request :evaluation-context '(:shared :client :app "shop"))))
+      (is-false (get-boolean-value client "flag-a" nil :evaluation-context '(:shared :call)))
+      (let ((ctx (provider-last-context provider)))
+        (is (string= "acme" (getf ctx :tenant)))
+        (is (string= "shop" (getf ctx :app)))
+        (is (eq :call (getf ctx :shared)))))))
