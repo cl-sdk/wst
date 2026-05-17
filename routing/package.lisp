@@ -60,6 +60,8 @@
    #:with-response-data
    #:with-request-data
    #:not-implemented
-   #:created-response))
+   #:created-response
+   #:append-request-data
+   #:remove-request-data))
 
 (in-package :io.github.cl-sdk.wst.routing)
