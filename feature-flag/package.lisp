@@ -5,7 +5,7 @@
 MVP implemented:
 - User-defined provider resolution via object-of-interest + domain
 - Client creation and domain-aware provider lookup
-- Evaluation context merge (client -> invocation)
+- Evaluation context merge (API -> client -> invocation)
 - Typed evaluations: boolean/string/number/object
 - Evaluation details with reason and error metadata
 
@@ -27,6 +27,8 @@ Planned for later phases:
    #:resolve-object-details
    #:acquire-client
    #:resolve-provider
+   #:set-evaluation-context
+   #:get-evaluation-context
    #:merge-evaluation-contexts
    #:evaluation-details
    #:make-evaluation-details
@@ -63,6 +65,7 @@ Planned for later phases:
 (defparameter *error-flag-not-found* :flag-not-found)
 (defparameter *error-type-mismatch* :type-mismatch)
 (defparameter *error-general* :general)
+(defparameter *api-evaluation-context* nil)
 
 (defgeneric resolve-provider (object domain)
   (:documentation "Resolve provider for OBJECT and DOMAIN.
@@ -159,7 +162,6 @@ Example:
 
 (defun merge-evaluation-contexts (&rest contexts)
   "Merge context plists in argument order so later contexts override earlier keys.
-Only explicit contexts passed by caller are merged (no implicit API/global context).
 Key order in result plists is implementation-dependent.
 Example:
   (merge-evaluation-contexts '(:a 1 :shared :api) '(:b 2 :shared :client) '(:c 3 :shared :call))
@@ -170,6 +172,20 @@ Example:
         (%ensure-context context "evaluation context")
         (loop :for (key value) :on context :by #'cddr
               :do (setf (getf result key) value))))))
+
+(defun set-evaluation-context (context)
+  "Set global API evaluation context.
+Example:
+  (set-evaluation-context '(:region \"eu\"))
+  => (:region \"eu\")"
+  (setf *api-evaluation-context* (%ensure-context context "global evaluation context")))
+
+(defun get-evaluation-context ()
+  "Return global API evaluation context.
+Example:
+  (get-evaluation-context)
+  => (:region \"eu\")"
+  *api-evaluation-context*)
 
 (defun %default-details (flag-key default-value &key
                           (reason *reason-default*)
@@ -238,6 +254,7 @@ Example:
 (defun %evaluate-details (client kind flag-key default-value invocation-context)
   (let* ((provider (client-provider client))
          (context (merge-evaluation-contexts
+                   *api-evaluation-context*
                    (slot-value client 'evaluation-context)
                    invocation-context))
          (resolver (%resolver-for-kind kind)))

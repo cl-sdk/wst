@@ -6,6 +6,14 @@
 (def-suite feature-flag-suite)
 (in-suite feature-flag-suite)
 
+(defmacro with-global-evaluation-context ((context) &body body)
+  `(let ((previous (get-evaluation-context)))
+     (unwind-protect
+          (progn
+            (set-evaluation-context ,context)
+            ,@body)
+       (set-evaluation-context previous))))
+
 (defclass static-provider (provider)
   ((values :initarg :values :reader static-provider-values)
    (last-context :accessor static-provider-last-context :initform nil)))
@@ -119,17 +127,23 @@
     (is-false (initialize-called-p provider))
     (is-false (shutdown-called-p provider))))
 
-(test evaluation-context-merges-client-and-invocation-with-right-precedence
-  (let* ((provider (make-instance 'static-provider :name "static"
-                                  :values '(("flag-a" . t))))
-         (client (acquire-client provider)))
-    (setf (slot-value client 'io.github.cl-sdk.wst.feature-flag::evaluation-context)
-          '(:shared :client :client-only 2))
-    (is-true (get-boolean-value client "flag-a" nil :evaluation-context '(:shared :call :call-only 3)))
-    (let ((ctx (static-provider-last-context provider)))
-      (is (eq :call (getf ctx :shared)))
-      (is (= 2 (getf ctx :client-only)))
-      (is (= 3 (getf ctx :call-only))))))
+(test evaluation-context-merges-api-client-and-invocation-with-right-precedence
+  (with-global-evaluation-context ('(:shared :api :api-only 1))
+    (let* ((provider (make-instance 'static-provider :name "static"
+                                    :values '(("flag-a" . t))))
+           (client (acquire-client provider)))
+      (setf (slot-value client 'io.github.cl-sdk.wst.feature-flag::evaluation-context)
+            '(:shared :client :client-only 2))
+      (is-true (get-boolean-value client "flag-a" nil :evaluation-context '(:shared :call :call-only 3)))
+      (let ((ctx (static-provider-last-context provider)))
+        (is (eq :call (getf ctx :shared)))
+        (is (= 1 (getf ctx :api-only)))
+        (is (= 2 (getf ctx :client-only)))
+        (is (= 3 (getf ctx :call-only)))))))
+
+(test global-evaluation-context-can-be-set-and-read
+  (with-global-evaluation-context ('(:tenant "acme"))
+    (is (equal '(:tenant "acme") (get-evaluation-context)))))
 
 (test domain-provider-selection-prefers-domain-over-default
   (let* ((holder (make-instance 'provider-holder
