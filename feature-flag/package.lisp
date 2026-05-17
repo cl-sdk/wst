@@ -50,7 +50,6 @@ Planned for later phases:
    #:get-string-details
    #:get-number-details
    #:get-object-details
-   #:reset-feature-flag
    #:*reason-default*
    #:*reason-static*
    #:*reason-error*
@@ -223,16 +222,6 @@ Example:
                     :reason *reason-error*
                     :error-code *error-provider-not-ready*
                     :error-message "Provider does not implement object resolution."))
-
-(defun reset-feature-flag ()
-  "No-op compatibility function.
-Provider selection and evaluation context state are user-managed.
-Previously this reset global API evaluation context, which no longer exists.
-Deprecated: kept for backward compatibility; remove calls from application code.
-Example:
-  (reset-feature-flag)
-  => NIL"
-  nil)
 
 (defun make-client (&key (name "client") domain object-of-interest evaluation-context)
   "Create a feature-flag client.
