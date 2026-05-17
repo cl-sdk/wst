@@ -128,7 +128,7 @@
     (is-false (shutdown-called-p provider))))
 
 (test evaluation-context-merges-api-client-and-invocation-with-right-precedence
-  (with-global-evaluation-context ('(:shared :api :api-only 1))
+  (with-global-evaluation-context ((list :shared :api :api-only 1))
     (let* ((provider (make-instance 'static-provider :name "static"
                                     :values '(("flag-a" . t))))
            (client (acquire-client provider)))
@@ -142,7 +142,7 @@
         (is (= 3 (getf ctx :call-only)))))))
 
 (test global-evaluation-context-can-be-set-and-read
-  (with-global-evaluation-context ('(:tenant "acme"))
+  (with-global-evaluation-context ((list :tenant "acme"))
     (is (equal '(:tenant "acme") (get-evaluation-context)))))
 
 (test domain-provider-selection-prefers-domain-over-default
