@@ -97,7 +97,7 @@
 (defmethod acquire-client ((holder provider-holder) &key (domain "default"))
   (let ((provider (or (and domain (cdr (assoc domain (provider-holder-domain-providers holder) :test #'equal)))
                       (provider-holder-default-provider holder)
-                      (make-instance 'provider :name "default"))))
+                      (make-instance 'provider :domain "default"))))
     (make-instance 'client :provider provider :domain domain)))
 
 (defmethod resolve-provider ((holder provider-holder) domain)
@@ -106,7 +106,7 @@
       (call-next-method)))
 
 (test provider-without-resolver-returns-default-and-provider-not-ready-error
-  (let* ((client (acquire-client (make-instance 'provider :name "base")))
+  (let* ((client (acquire-client (make-instance 'provider :domain "base")))
          (details (get-boolean-details client "flag-a" nil)))
     (is-false (evaluation-details-value details))
     (is (eq *reason-error* (evaluation-details-reason details)))
@@ -114,7 +114,7 @@
 
 (test provider-errors-fallback-to-default-with-general-error
   (let* ((holder (make-instance 'provider-holder
-                                :default-provider (make-instance 'exploding-provider :name "explode")))
+                                :default-provider (make-instance 'exploding-provider :domain "explode")))
          (client (acquire-client holder))
          (details (get-boolean-details client "flag-a" t)))
     (is-true (evaluation-details-value details))
@@ -122,14 +122,14 @@
     (is (eq *error-general* (evaluation-details-error-code details)))))
 
 (test resolve-provider-does-not-trigger-lifecycle
-  (let ((provider (make-instance 'lifecycle-provider :name "lifecycle")))
+  (let ((provider (make-instance 'lifecycle-provider :domain "lifecycle")))
     (resolve-provider (make-instance 'provider-holder :default-provider provider) nil)
     (is-false (initialize-called-p provider))
     (is-false (shutdown-called-p provider))))
 
 (test evaluation-context-merges-api-client-and-invocation-with-right-precedence
   (with-global-evaluation-context ((list :shared :api :api-only 1))
-    (let* ((provider (make-instance 'static-provider :name "static"
+    (let* ((provider (make-instance 'static-provider :domain "static"
                                     :values '(("flag-a" . t))))
            (client (acquire-client provider)))
       (setf (slot-value client 'io.github.cl-sdk.wst.feature-flag::evaluation-context)
@@ -147,10 +147,10 @@
 
 (test domain-provider-selection-prefers-domain-over-default
   (let* ((holder (make-instance 'provider-holder
-                                :default-provider (make-instance 'static-provider :name "default"
+                                :default-provider (make-instance 'static-provider :domain "default"
                                                                  :values '(("flag-a" . nil)))
                                 :domain-providers (list (cons "payments"
-                                                              (make-instance 'static-provider :name "payments"
+                                                              (make-instance 'static-provider :domain "payments"
                                                                              :values '(("flag-a" . t)))))))
          (default-client (acquire-client holder))
          (payments-client (acquire-client holder :domain "payments")))
@@ -159,7 +159,7 @@
 
 (test typed-evaluations-return-provider-values-and-details
   (let* ((holder (make-instance 'provider-holder
-                                :default-provider (make-instance 'static-provider :name "typed"
+                                :default-provider (make-instance 'static-provider :domain "typed"
                                                                  :values '(("bool-flag" . t)
                                                                            ("str-flag" . "beta")
                                                                            ("num-flag" . 42)

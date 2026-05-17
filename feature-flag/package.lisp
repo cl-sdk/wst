@@ -15,7 +15,7 @@ Planned for later phases:
 - Extended lifecycle and transaction/request propagation")
   (:export
    #:provider
-   #:provider-name
+   #:provider-domain
    #:provider-metadata
    #:initialize-provider
    #:shutdown-provider
@@ -78,21 +78,21 @@ Example:
 (defgeneric provider-metadata (provider)
   (:documentation "Return metadata for PROVIDER as a plist.
 Example:
-  (provider-metadata (make-instance 'provider :name \"demo\"))
-  => (:name \"demo\")"))
+  (provider-metadata (make-instance 'provider :domain \"payments\"))
+  => (:domain \"payments\")"))
 
 (defgeneric initialize-provider (provider)
   (:documentation "Initialize PROVIDER lifecycle.
 Caller-managed: API registration does not invoke this automatically.
 Example:
-  (initialize-provider (make-instance 'provider :name \"demo\"))
+  (initialize-provider (make-instance 'provider :domain \"payments\"))
   => #<PROVIDER ...>"))
 
 (defgeneric shutdown-provider (provider)
   (:documentation "Shutdown PROVIDER lifecycle.
 Caller-managed: API reset/registration does not invoke this automatically.
 Example:
-  (shutdown-provider (make-instance 'provider :name \"demo\"))
+  (shutdown-provider (make-instance 'provider :domain \"payments\"))
   => #<PROVIDER ...>"))
 
 (defgeneric acquire-client (provider &key domain)
@@ -124,7 +124,7 @@ Example:
   => #S(EVALUATION-DETAILS ...)"))
 
 (defclass provider ()
-  ((name :initarg :name :accessor provider-name :initform (error "provider.name is required.")))
+  ((domain :initarg :domain :accessor provider-domain :initform (error "provider.domain is required.")))
   (:documentation "Base provider protocol class."))
 
 (defclass client ()
@@ -200,7 +200,7 @@ Example:
                            :metadata metadata))
 
 (defmethod provider-metadata ((provider provider))
-  (list :name (provider-name provider)))
+  (list :domain (provider-domain provider)))
 
 (defmethod initialize-provider ((provider provider))
   provider)

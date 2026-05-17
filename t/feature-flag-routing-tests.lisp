@@ -39,7 +39,7 @@
       (is (string= "pro" (getf context :plan))))))
 
 (test client-for-request-composes-request-scoped-context-into-client-context
-  (let* ((provider (make-instance 'context-capturing-provider :name "capture"))
+  (let* ((provider (make-instance 'context-capturing-provider :domain "capture"))
          (request (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))
          (response (io.github.cl-sdk.wst.routing:make-response))
          (middleware (wrap-feature-flag-context
