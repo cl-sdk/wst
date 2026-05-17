@@ -30,6 +30,20 @@ Slots:
   (or (gethash header-name (request-headers request))
      default-value))
 
+(defun append-request-data (request key value)
+  "Push into the REQUEST data a new pair of KEY and VALUE."
+  (setf (request-data request)
+        (append (request-data request)
+                (list key value)))
+  request)
+
+(defun remove-request-data (request key)
+  "Remove from REQUEST data the pair of reference by KEY."
+  (let ((data (request-data request)))
+    (remf data key)
+    (setf (request-data request) data)
+    request))
+
 (defstruct response
   "Structure representing an HTTP response.
 

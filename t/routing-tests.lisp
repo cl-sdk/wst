@@ -111,6 +111,44 @@
     (io.github.cl-sdk.wst.routing:with-response-data (token) rs
       (5am:is (string-equal token "abc")))))
 
+;;; append-request-data
+
+(5am:def-test append-request-data-adds-key-value-pair ()
+  (let ((request (io.github.cl-sdk.wst.routing:make-request)))
+    (io.github.cl-sdk.wst.routing:append-request-data request :session "my-session")
+    (5am:is (string-equal "my-session"
+                          (getf (io.github.cl-sdk.wst.routing:request-data request) :session)))))
+
+(5am:def-test append-request-data-returns-request ()
+  (let ((request (io.github.cl-sdk.wst.routing:make-request)))
+    (5am:is (eq request
+                (io.github.cl-sdk.wst.routing:append-request-data request :key "value")))))
+
+(5am:def-test append-request-data-accumulates-multiple-pairs ()
+  (let ((request (io.github.cl-sdk.wst.routing:make-request)))
+    (io.github.cl-sdk.wst.routing:append-request-data request :a 1)
+    (io.github.cl-sdk.wst.routing:append-request-data request :b 2)
+    (5am:is (= 1 (getf (io.github.cl-sdk.wst.routing:request-data request) :a)))
+    (5am:is (= 2 (getf (io.github.cl-sdk.wst.routing:request-data request) :b)))))
+
+;;; remove-request-data
+
+(5am:def-test remove-request-data-removes-key-value-pair ()
+  (let ((request (io.github.cl-sdk.wst.routing:make-request :data '(:session "my-session"))))
+    (io.github.cl-sdk.wst.routing:remove-request-data request :session)
+    (5am:is (null (getf (io.github.cl-sdk.wst.routing:request-data request) :session)))))
+
+(5am:def-test remove-request-data-returns-request ()
+  (let ((request (io.github.cl-sdk.wst.routing:make-request :data '(:session "my-session"))))
+    (5am:is (eq request
+                (io.github.cl-sdk.wst.routing:remove-request-data request :session)))))
+
+(5am:def-test remove-request-data-leaves-other-pairs-intact ()
+  (let ((request (io.github.cl-sdk.wst.routing:make-request :data '(:a 1 :b 2))))
+    (io.github.cl-sdk.wst.routing:remove-request-data request :a)
+    (5am:is (null (getf (io.github.cl-sdk.wst.routing:request-data request) :a)))
+    (5am:is (= 2 (getf (io.github.cl-sdk.wst.routing:request-data request) :b)))))
+
 ;;; wst.request-content
 
 (5am:def-test parse-content-type-parses-simple-type ()
