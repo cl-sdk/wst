@@ -94,7 +94,8 @@
 
 (defmethod resolve-provider ((holder provider-holder) domain)
   (or (and domain (cdr (assoc domain (provider-holder-domain-providers holder) :test #'equal)))
-      (provider-holder-default-provider holder)))
+      (provider-holder-default-provider holder)
+      (call-next-method)))
 
 (test provider-without-resolver-returns-default-and-provider-not-ready-error
   (let* ((client (acquire-client (make-instance 'provider :name "base")))
