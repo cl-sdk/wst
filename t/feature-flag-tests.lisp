@@ -6,11 +6,11 @@
 (def-suite feature-flag-suite)
 (in-suite feature-flag-suite)
 
-(defmacro with-global-evaluation-context ((context) &body body)
+(defmacro with-global-evaluation-context ((context-value) &body body)
   `(let ((previous (get-evaluation-context)))
      (unwind-protect
           (progn
-            (set-evaluation-context ,context)
+            (set-evaluation-context ,context-value)
             ,@body)
        (set-evaluation-context previous))))
 
