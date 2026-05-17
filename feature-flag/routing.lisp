@@ -44,7 +44,7 @@ Example:
                                         (request-data-key :feature-flag-evaluation-context))
   "Create a feature-flag client composed with request-scoped context.
 OBJECT-OF-INTEREST defaults to REQUEST and is used by RESOLVE-PROVIDER.
-NAME is accepted for backward compatibility; it was used by the removed CREATE-CLIENT API and is currently unused.
+NAME is deprecated and accepted only for backward compatibility; it was used by the removed CREATE-CLIENT API and is currently unused.
 Example:
   (client-for-request request :domain \"payments\" :evaluation-context '(:app \"checkout\"))
   => #<CLIENT ...>"

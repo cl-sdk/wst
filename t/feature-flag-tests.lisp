@@ -122,9 +122,9 @@
 (test evaluation-context-merges-client-and-invocation-with-right-precedence
   (let* ((provider (make-instance 'static-provider :name "static"
                                   :values '(("flag-a" . t))))
-         (client (make-instance 'client :provider provider
-                                :domain "default"
-                                :client-evaluation-context '(:shared :client :client-only 2))))
+         (client (acquire-client provider)))
+    (setf (slot-value client 'io.github.cl-sdk.wst.feature-flag::evaluation-context)
+          '(:shared :client :client-only 2))
     (is-true (get-boolean-value client "flag-a" nil :evaluation-context '(:shared :call :call-only 3)))
     (let ((ctx (static-provider-last-context provider)))
       (is (eq :call (getf ctx :shared)))
