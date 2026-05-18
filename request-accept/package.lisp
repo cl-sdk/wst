@@ -148,7 +148,7 @@ returned. Returns the selected accept entry as a
         :unless (string= trimmed "")
           :collect (let ((equal-position (position #\= trimmed)))
                      (if equal-position
-                         (let* ((name (string-downcase
+                         (let ((name (string-downcase
                                        (string-trim '(#\Space #\Tab)
                                                     (subseq trimmed 0 equal-position))))
                                 (value (%unquote-string

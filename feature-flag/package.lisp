@@ -252,12 +252,12 @@ Example:
     (:object #'resolve-object-details)))
 
 (defun %evaluate-details (client kind flag-key default-value invocation-context)
-  (let* ((provider (client-provider client))
-         (context (merge-evaluation-contexts
-                   *api-evaluation-context*
-                   (slot-value client 'evaluation-context)
-                   invocation-context))
-         (resolver (%resolver-for-kind kind)))
+  (let ((provider (client-provider client))
+        (context (merge-evaluation-contexts
+                  *api-evaluation-context*
+                  (slot-value client 'evaluation-context)
+                  invocation-context))
+        (resolver (%resolver-for-kind kind)))
     (handler-case
         (let ((details (funcall resolver provider flag-key default-value context)))
           (if (and (typep details 'evaluation-details)

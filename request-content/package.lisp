@@ -112,8 +112,8 @@ ENCODING is the external-format keyword used when decoding a binary stream
                               (incf index))
                              ((and (char= char #\%)
                                    (< (+ index 2) size))
-                              (let* ((h1 (digit-char-p (char value (1+ index)) 16))
-                                     (h2 (digit-char-p (char value (+ index 2)) 16)))
+                              (let ((h1 (digit-char-p (char value (1+ index)) 16))
+                                    (h2 (digit-char-p (char value (+ index 2)) 16)))
                                 (if (and h1 h2)
                                     (progn
                                       (write-char (code-char (+ (* h1 16) h2)) out)

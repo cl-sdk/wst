@@ -7,7 +7,7 @@
 (5am:def-suite wst.routing.suite
   :description "Tests for the wst.routing package.")
 
-(5am:in-suite wst.routing.suite)
+f(5am:in-suite wst.routing.suite)
 
 ;;; route macro, add-route, dispatch-route
 

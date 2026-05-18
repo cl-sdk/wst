@@ -279,11 +279,11 @@ it is dispatched.
 with NIL."
   (with-slots (method uri)
       request
-    (let* ((response (make-response))
-           (found (or (match-route uri method)
-                     (and *any-route-handler*
-                        (equal (request-method request) (route-method *any-route-handler*))
-                        (cons *any-route-handler* nil)))))
+    (let ((response (make-response))
+          (found (or (match-route uri method)
+                    (and *any-route-handler*
+                       (equal (request-method request) (route-method *any-route-handler*))
+                       (cons *any-route-handler* nil)))))
       (if (not found)
           (%dispatcher nil request response)
           (destructuring-bind (route . params)
@@ -311,9 +311,9 @@ with NIL."
 
 (defun dispatch-route-by-route (route request)
   "Dispatch a route by its PATH and METHOD. Pass REQUEST to it."
-  (let* ((response (make-response))
-         (found (or (match-route (request-uri request) (request-method request) (list route))
-                   (cons route nil))))
+  (let ((response (make-response))
+        (found (or (match-route (request-uri request) (request-method request) (list route))
+                  (cons route nil))))
     (destructuring-bind (route . params)
         found
       (setf (request-data request) (append (request-data request) (list :params params)))

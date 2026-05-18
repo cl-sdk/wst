@@ -34,7 +34,7 @@
     (5am:is (eq env (getf (io.github.cl-sdk.wst.routing:request-data req) :env)))))
 
 (5am:def-test response-to-woo-response-returns-correct-format ()
-  (let* ((rs (io.github.cl-sdk.wst.routing:make-response)))
+  (let ((rs (io.github.cl-sdk.wst.routing:make-response)))
     (setf (io.github.cl-sdk.wst.routing:response-status rs) 200
           (io.github.cl-sdk.wst.routing:response-headers rs) (list :content-type "text/plain")
           (io.github.cl-sdk.wst.routing:response-content rs) "hello")

@@ -183,7 +183,7 @@
     (5am:is (= 1 count))))
 
 (def-route-testing build-route-with-custom-metadata ()
-  (let* ((handler (lambda (req res) (declare (ignore req)) res)))
+  (let ((handler (lambda (req res) (declare (ignore req)) res)))
     (io.github.cl-sdk.wst.routing.dsl:build-webserver
      `(:group
        (:route :GET route-a "/" ,handler :custom :ok)

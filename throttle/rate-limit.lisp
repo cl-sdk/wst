@@ -87,8 +87,8 @@ a fresh MEMORY-STORE is used."
         (unless count
           (setf count 0
                 start now))
-        (let* ((retry-after-seconds (max 0 (- window-seconds (- now start))))
-               (remaining (max 0 (- max-requests (1+ count)))))
+        (let ((retry-after-seconds (max 0 (- window-seconds (- now start))))
+              (remaining (max 0 (- max-requests (1+ count)))))
           (if (>= count max-requests)
               (values nil retry-after-seconds 0)
               (progn

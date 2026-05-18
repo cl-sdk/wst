@@ -20,7 +20,7 @@
 (defmethod resolve-provider ((request io.github.cl-sdk.wst.routing::request) domain)
   (declare (ignore domain))
   (or (getf (io.github.cl-sdk.wst.routing:request-data request) :feature-flag-provider)
-      (call-next-method)))
+     (call-next-method)))
 
 (defmethod acquire-client ((provider context-capturing-provider) &key (domain "default"))
   (make-instance 'client :provider provider :domain domain))
@@ -39,13 +39,13 @@
       (is (string= "pro" (getf context :plan))))))
 
 (test client-for-request-composes-request-scoped-context-into-client-context
-  (let* ((provider (make-instance 'context-capturing-provider :domain "capture"))
-         (request (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))
-         (response (io.github.cl-sdk.wst.routing:make-response))
-         (middleware (wrap-feature-flag-context
-                      :context-fn (lambda (request)
-                                    (declare (ignore request))
-                                    '(:tenant "acme" :shared :request)))))
+  (let ((provider (make-instance 'context-capturing-provider :domain "capture"))
+        (request (io.github.cl-sdk.wst.routing:make-request :uri "/" :method :GET))
+        (response (io.github.cl-sdk.wst.routing:make-response))
+        (middleware (wrap-feature-flag-context
+                     :context-fn (lambda (request)
+                                   (declare (ignore request))
+                                   '(:tenant "acme" :shared :request)))))
     (setf (io.github.cl-sdk.wst.routing:request-data request)
           (append (io.github.cl-sdk.wst.routing:request-data request)
                   (list :feature-flag-provider provider)))
