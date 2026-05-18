@@ -4,6 +4,6 @@
   :license "Unlicense"
   :version "0.1.0"
   :depends-on (#:io.github.cl-sdk.wst.rate-limit.store)
-  :pathname "throttle"
+  :pathname "rate-limit"
   :serial t
   :components ((:file "memory-store")))

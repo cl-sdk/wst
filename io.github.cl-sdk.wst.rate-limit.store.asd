@@ -4,6 +4,6 @@
   :license "Unlicense"
   :version "0.1.0"
   :depends-on ()
-  :pathname "throttle"
+  :pathname "rate-limit"
   :serial t
   :components ((:file "store")))
