@@ -1,5 +1,7 @@
 # wst (web server tools)
 
+![banner](./assets/banner.png)
+
 Tools to help you build web applications in Common Lisp.
 
 The project philosophy is explicitness: there is no hidden state.
