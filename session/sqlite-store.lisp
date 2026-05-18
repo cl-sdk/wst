@@ -22,7 +22,7 @@
                :accessor sqlite-store-connection)
    (database-path :initarg :database-path
                   :initform #P"sessions.sqlite3"
-                  :accessor sqlite-store-database-path)
+                           :accessor sqlite-store-database-path)
    (table-name :initarg :table-name
                :initform "sessions"
                :accessor sqlite-store-table-name)
@@ -37,7 +37,7 @@
                   :reader sqlite-store-lock
                   :initform
                   #+sbcl
-                  (sb-thread:make-mutex :name "wst-session-sqlite-store-lock")
+                  (sb-thread:make-mutex :name "sqlite-store-lock")
                   #-sbcl
                   nil)))
 
@@ -53,12 +53,12 @@
 
 (defun valid-table-name-p (name)
   (and (stringp name)
-       (> (length name) 0)
-       (every (lambda (char)
-                (or (alpha-char-p char)
-                    (digit-char-p char)
-                    (char= char #\_)))
-              name)))
+     (> (length name) 0)
+     (every (lambda (char)
+              (or (alpha-char-p char)
+                 (digit-char-p char)
+                 (char= char #\_)))
+            name)))
 
 (defun store-table-name (store)
   (let ((table-name (sqlite-store-table-name store)))
@@ -98,6 +98,7 @@
           session-id))))
 
 (defun generate-session-id (store)
+  (declare (ignorable store))
   (apply #'concatenate (list* 'string (loop for i upto 20 collect (write-to-string (random 10))))))
 
 (defun initialize-sqlite-store (store)
@@ -145,7 +146,7 @@ Call this once during server startup, before using STORE for session operations.
       (let ((row (car (sqlite:execute-to-list
                        (sqlite-store-connection store)
                        (format nil "INSERT INTO ~a (id, payload, created_at, updated_at, expires_at)
-                    VALUES (?, ?, ?, ?, ?) returning id, payload, created_at, updated_at, expires_at"
+VALUES (?, ?, ?, ?, ?) returning id, payload, created_at, updated_at, expires_at"
                                (store-table-name store))
                        session-id
                        (funcall (sqlite-store-data-serializer store) data)
@@ -154,16 +155,7 @@ Call this once during server startup, before using STORE for session operations.
                        expires-at))))
         (%session-object-from-row store row)))))
 
-(defun %recover-session (store session-id)
-  (let ((row (find-session-row store session-id)))
-    (when row
-      (make-session-object (row-column row 0)
-                           (deserialize-session-data (row-column row 1))
-                           (row-column row 2)
-                           (row-column row 3)
-                           (row-column row 4)))))
-
-(defmethod wst.session:recover-session ((store sqlite-store) session-id &key &allow-other-keys)
+(defmethod io.github.cl-sdk.wst.session:recover-session ((store sqlite-store) session-id &key &allow-other-keys)
   (with-store-lock (store)
     (cleanup-expired-sessions store)
     (%recover-session store session-id)))
