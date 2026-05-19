@@ -43,9 +43,9 @@
       (io.github.cl-sdk.wst.session.sqlite:initialize-sqlite-store store))
     (let* ((created (io.github.cl-sdk.wst.session:create-session store
                                                                  '(:user "alice")
-                                                                 :session-id "session-id"))
+                                                                 :session-id "idempotent-init-session"))
            (recovered (io.github.cl-sdk.wst.session:recover-session store (getf created :id))))
-      (5am:is (equal "session-id" (getf recovered :id)))
+      (5am:is (equal "idempotent-init-session" (getf recovered :id)))
       (5am:is (equal '(:user "alice") (getf recovered :data))))))
 
 (5am:def-test sqlite-store-initialize-requires-sqlite-store ()
