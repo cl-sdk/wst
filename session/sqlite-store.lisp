@@ -118,7 +118,7 @@
  Call this once during server startup, before using STORE for session operations."
   (check-type store sqlite-store)
   (with-store-lock (store)
-    (let ((table-name (store-table-name store)))
+    (let ((table-name (sqlite-store-table-name store)))
       (sqlite:execute-non-query
        (sqlite-store-connection store)
        (create-table-statement table-name))
@@ -136,15 +136,16 @@
 (defun %find-session (store session-id)
   (car (sqlite:execute-to-list
         (sqlite-store-connection store)
-        (find-session-by-id-statement (store-table-name store))
+        (find-session-by-id-statement (sqlite-store-table-name store))
         session-id)))
 
 (defun %session-object-from-row (store row)
-  (make-session-object (row-column row 0)
-                       (funcall (sqlite-store-data-deserializer store) (row-column row 1))
-                       (row-column row 2)
-                       (row-column row 3)
-                       (row-column row 4)))
+  (%make-session-object (%row-column row 0)
+                        (funcall (sqlite-store-data-deserializer store)
+                                 (%row-column row 1))
+                        (%row-column row 2)
+                        (%row-column row 3)
+                        (%row-column row 4)))
 
 (defun %recover-session (store session-id)
   (let ((row (%find-session store session-id)))
@@ -159,7 +160,7 @@
                              (sqlite-store-max-age-seconds store)))))
       (let ((row (car (sqlite:execute-to-list
                        (sqlite-store-connection store)
-                       (insert-session-statement (store-table-name store))
+                       (insert-session-statement (sqlite-store-table-name store))
                        session-id
                        (funcall (sqlite-store-data-serializer store) data)
                        created-at
@@ -169,12 +170,12 @@
 
 (defmethod io.github.cl-sdk.wst.session:recover-session ((store sqlite-store) session-id &key &allow-other-keys)
   (with-store-lock (store)
-    (cleanup-expired-sessions store)
+    (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
     (%recover-session store session-id)))
 
 (defmethod io.github.cl-sdk.wst.session:update-session ((store sqlite-store) session &key &allow-other-keys)
   (with-store-lock (store)
-    (cleanup-expired-sessions store)
+    (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
     (let* ((id (getf session :id))
            (data (getf session :data))
            (updated-at (now))
@@ -184,21 +185,21 @@
         (error "Session object must include :id when updating."))
       (let ((row (car (sqlite:execute-to-list
                        (sqlite-store-connection store)
-                       (update-session-statement (store-table-name store))
+                       (update-session-statement (sqlite-store-table-name store))
                        (funcall (sqlite-store-data-serializer store) data)
                        updated-at
                        expires-at
                        id))))
         (%session-object-from-row store row)))))
-
+o
 (defmethod io.github.cl-sdk.wst.session:session-exists-p ((store sqlite-store) session-id &key &allow-other-keys)
   (with-store-lock (store)
-    (cleanup-expired-sessions store)
+    (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
     (not (null (%find-session store session-id)))))
 
 (defmethod io.github.cl-sdk.wst.session:renew-session ((store sqlite-store) session-id &optional additional-time &key &allow-other-keys)
   (with-store-lock (store)
-    (cleanup-expired-sessions store)
+    (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
     (let* ((row (%find-session store session-id)))
       (when row
         (let* ((new-expires-at (+ (now)
@@ -206,7 +207,7 @@
                                      (sqlite-store-max-age-seconds store))))
                (updated-row (car (sqlite:execute-to-list
                                   (sqlite-store-connection store)
-                                  (renew-session-statement (store-table-name store))
+                                  (renew-session-statement (sqlite-store-table-name store))
                                   new-expires-at
                                   (now)
                                   session-id))))
@@ -217,12 +218,12 @@
   (with-store-lock (store)
     (sqlite:execute-non-query
      (sqlite-store-connection store)
-     (delete-session-statement (store-table-name store))
+     (delete-session-statement (sqlite-store-table-name store))
      session-id)))
 
-(defmethod io.github.cl-sdk.wst.session:cleanup-expired-sessions ((store sqlite-store) &key date)
+(defmethod io.github.cl-sdk.wst.session:cleanup-expired-sessions ((store sqlite-store) &key before-date)
   (with-slots (table-name connection)
       store
     (sqlite:execute-non-query connection
                               (delete-expired-session-statement table-name)
-                              date)))
+                              before-date)))
