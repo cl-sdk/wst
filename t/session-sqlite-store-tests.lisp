@@ -45,6 +45,7 @@
                                                                  '(:user "alice")
                                                                  :session-id "session-id"))
            (recovered (io.github.cl-sdk.wst.session:recover-session store (getf created :id))))
+      (5am:is (equal "session-id" (getf recovered :id)))
       (5am:is (equal '(:user "alice") (getf recovered :data))))))
 
 (5am:def-test sqlite-store-initialize-requires-sqlite-store ()
