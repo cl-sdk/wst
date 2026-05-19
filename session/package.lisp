@@ -2,7 +2,7 @@
   (:use #:cl)
   (:export
    #:create-session
-   #:recover-session
+   #:access-session
    #:update-session
    #:session-exists-p
    #:renew-session
@@ -19,11 +19,15 @@
 
 Returns the newly created session object."))
 
-(defgeneric recover-session (object session-id &key &allow-other-keys)
-  (:documentation "Retrieves the session data associated with SESSION-ID from OBJECT.
+(defgeneric access-session (object session-id &key &allow-other-keys)
+  (:documentation "Retrieves the session data associated with SESSION-ID from OBJECT and
+it also must update the `last access at` if the session is valid.
 
-Returns the session data if it exists and is valid; returns NIL if the session
-is expired or does not exist.
+This method must return this values:
+
+- (:not-found session-id)
+- (:expired session-id)
+- (:session session)
 
 - OBJECT: The session backend or manager.
 - SESSION-ID: The identifier of the session to recover.
