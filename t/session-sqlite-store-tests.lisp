@@ -61,7 +61,25 @@
            (recovered (io.github.cl-sdk.wst.session:access-session store session-id)))
       (5am:is-true session-id)
       (5am:is (equal '(:user "alice") (getf recovered :data)))
-      (5am:is (equal session-id (getf recovered :id))))))
+      (5am:is (equal session-id (getf recovered :id)))
+      (5am:is (integerp (getf recovered :last-accessed-at))))))
+
+(5am:def-test sqlite-store-access-session-updates-last-accessed-at ()
+  (with-sqlite-session-store (store)
+    (let* ((created (io.github.cl-sdk.wst.session:create-session store
+                                                                 '(:user "alice")
+                                                                 :session-id "session-id"))
+           (session-id (getf created :id)))
+      (sqlite:execute-non-query (io.github.cl-sdk.wst.session.sqlite:sqlite-store-connection store)
+                                (format nil "UPDATE ~a SET updated_at = 0, last_accessed_at = 0 WHERE id = ?"
+                                        (io.github.cl-sdk.wst.session.sqlite:sqlite-store-table-name store))
+                                session-id)
+      (let ((accessed (io.github.cl-sdk.wst.session:access-session store session-id)))
+        (5am:is (equal session-id (getf accessed :id)))
+        (5am:is (equal '(:user "alice") (getf accessed :data)))
+        (5am:is (> (getf accessed :updated-at) 0))
+        (5am:is (> (getf accessed :last-accessed-at) 0))
+        (5am:is (= (getf accessed :updated-at) (getf accessed :last-accessed-at)))))))
 
 (5am:def-test sqlite-store-update-session ()
   (with-sqlite-session-store (store)
