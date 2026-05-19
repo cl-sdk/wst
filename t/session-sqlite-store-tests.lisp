@@ -140,18 +140,18 @@
         (let ((before (getf active :expires-at)))
           (5am:is-true (io.github.cl-sdk.wst.session:renew-session store session-id renewal-seconds))
           (let ((renewed (io.github.cl-sdk.wst.session:access-session store session-id)))
+            (5am:is-true renewed)
             (5am:is (> (getf renewed :expires-at) before))
-            (5am:is-true (io.github.cl-sdk.wst.session:session-exists-p store session-id))
-            (5am:is-true (io.github.cl-sdk.wst.session:access-session store session-id)))))
+            (5am:is-true (io.github.cl-sdk.wst.session:session-exists-p store session-id)))))
       (io.github.cl-sdk.wst.session:terminate-session store session-id)
       (5am:is-false (io.github.cl-sdk.wst.session:session-exists-p store session-id))
       (5am:is-false (io.github.cl-sdk.wst.session:access-session store session-id)))
-    (let* ((immediately-expired-ttl 0)
+    (let* ((immediate-expiry-ttl 0)
            (created (io.github.cl-sdk.wst.session:create-session
                      store
                      '(:user "bob")
                      :session-id "expired-session"
-                     :ttl-seconds immediately-expired-ttl))
+                     :ttl-seconds immediate-expiry-ttl))
            (session-id (getf created :id)))
       (5am:is-false (io.github.cl-sdk.wst.session:access-session store session-id))
       (5am:is-false (io.github.cl-sdk.wst.session:session-exists-p store session-id)))))
