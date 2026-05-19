@@ -1,12 +1,5 @@
 (defpackage #:io.github.cl-sdk.wst.session.sqlite
   (:use #:cl)
-  (:import-from #:io.github.cl-sdk.wst.session
-                #:create-session
-                #:recover-session
-                #:update-session
-                #:session-exists-p
-                #:renew-session
-                #:terminate-session)
   (:export
    #:sqlite-store
    #:sqlite-store-connection
@@ -181,7 +174,7 @@
                          created-at))))
           (%session-object-from-row store row))))))
 
-(defmethod io.github.cl-sdk.wst.session:recover-session ((store sqlite-store) session-id &key &allow-other-keys)
+(defmethod io.github.cl-sdk.wst.session:access-session ((store sqlite-store) session-id &key &allow-other-keys)
   (let ((session (with-store-lock (store)
                    (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
                    (%recover-session store session-id))))

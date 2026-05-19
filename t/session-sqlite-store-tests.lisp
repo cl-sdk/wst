@@ -44,7 +44,7 @@
     (let* ((created (io.github.cl-sdk.wst.session:create-session store
                                                                  '(:user "alice")
                                                                  :session-id "idempotent-init-session"))
-           (recovered (io.github.cl-sdk.wst.session:recover-session store (getf created :id))))
+           (recovered (io.github.cl-sdk.wst.session:access-session store (getf created :id))))
       (5am:is (equal "idempotent-init-session" (getf recovered :id)))
       (5am:is (equal '(:user "alice") (getf recovered :data))))))
 
@@ -58,7 +58,7 @@
                                                                  '(:user "alice")
                                                                  :session-id "session-id"))
            (session-id (getf created :id))
-           (recovered (io.github.cl-sdk.wst.session:recover-session store session-id)))
+           (recovered (io.github.cl-sdk.wst.session:access-session store session-id)))
       (5am:is-true session-id)
       (5am:is (equal '(:user "alice") (getf recovered :data)))
       (5am:is (equal session-id (getf recovered :id))))))
@@ -71,7 +71,7 @@
            (updated (copy-list created)))
       (setf (getf updated :data) '(:user "bob"))
       (io.github.cl-sdk.wst.session:update-session store updated)
-      (let ((recovered (io.github.cl-sdk.wst.session:recover-session store (getf created :id))))
+      (let ((recovered (io.github.cl-sdk.wst.session:access-session store (getf created :id))))
         (5am:is (equal '(:user "bob") (getf recovered :data)))))))
 
 (5am:def-test sqlite-store-renew-session ()
@@ -80,9 +80,9 @@
                                                                  :session-id "session-id"
                                                                  :ttl-seconds 10))
            (session-id (getf created :id))
-           (before (getf (io.github.cl-sdk.wst.session:recover-session store session-id) :expires-at)))
+           (before (getf (io.github.cl-sdk.wst.session:access-session store session-id) :expires-at)))
       (io.github.cl-sdk.wst.session:renew-session store session-id 120)
-      (let ((after (getf (io.github.cl-sdk.wst.session:recover-session store session-id) :expires-at)))
+      (let ((after (getf (io.github.cl-sdk.wst.session:access-session store session-id) :expires-at)))
         (5am:is (> after before))))))
 
 (5am:def-test sqlite-store-terminates-session ()
@@ -94,7 +94,7 @@
       (5am:is-true (io.github.cl-sdk.wst.session:session-exists-p store session-id))
       (io.github.cl-sdk.wst.session:terminate-session store session-id)
       (5am:is-false (io.github.cl-sdk.wst.session:session-exists-p store session-id))
-      (5am:is-false (io.github.cl-sdk.wst.session:recover-session store session-id)))))
+      (5am:is-false (io.github.cl-sdk.wst.session:access-session store session-id)))))
 
 (5am:def-test sqlite-store-does-not-recover-expired-session ()
   (with-sqlite-session-store (store)
@@ -104,5 +104,5 @@
                      :session-id "session-id"
                      :ttl-seconds 0))
            (session-id (getf created :id)))
-      (5am:is-false (io.github.cl-sdk.wst.session:recover-session store session-id))
+      (5am:is-false (io.github.cl-sdk.wst.session:access-session store session-id))
       (5am:is-false (io.github.cl-sdk.wst.session:session-exists-p store session-id)))))
