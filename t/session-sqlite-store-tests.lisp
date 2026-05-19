@@ -128,7 +128,7 @@
 (5am:def-test sqlite-store-session-state-transitions ()
   (with-sqlite-session-store (store)
     (let* ((active-ttl-seconds 60)
-           (renewal-seconds 120)
+           (renewal-ttl-seconds 120)
            (created (io.github.cl-sdk.wst.session:create-session
                      store
                      '(:user "alice")
@@ -139,7 +139,7 @@
       (5am:is-true (io.github.cl-sdk.wst.session:session-exists-p store session-id))
       (5am:is-true active)
       (let ((before (getf active :expires-at)))
-        (5am:is-true (io.github.cl-sdk.wst.session:renew-session store session-id renewal-seconds))
+        (5am:is-true (io.github.cl-sdk.wst.session:renew-session store session-id renewal-ttl-seconds))
         (let ((renewed (io.github.cl-sdk.wst.session:access-session store session-id)))
           (5am:is-true renewed)
           (5am:is (> (getf renewed :expires-at) before))
