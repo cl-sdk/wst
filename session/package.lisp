@@ -6,7 +6,8 @@
    #:update-session
    #:session-exists-p
    #:renew-session
-   #:terminate-session))
+   #:terminate-session
+   #:cleanup-expired-sessions))
 
 (in-package :io.github.cl-sdk.wst.session)
 
@@ -66,5 +67,12 @@ Additional keyword arguments may be accepted by specific implementations."))
 
 - OBJECT: The session backend or manager.
 - SESSION-ID: The identifier of the session to terminate.
+
+Additional keyword arguments may be accepted by specific implementations."))
+
+(defgeneric cleanup-expired-sessions (object &key &allow-other-keys)
+  (:documentation "Maintainance method to clean-up expired sessions.
+
+- OBJECT: The session backend or manager.
 
 Additional keyword arguments may be accepted by specific implementations."))
