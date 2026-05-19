@@ -21,6 +21,12 @@
 (defun now ()
   (get-universal-time))
 
+(declaim (inline %row-column))
+(defun %row-column (row index)
+  (etypecase row
+    (list (nth index row))
+    (vector (aref row index))))
+
 ;; queries
 
 (declaim (inline delete-expired-session-statement))
@@ -105,12 +111,6 @@
      ,@body)
   #-sbcl
   `(progn ,@body))
-
-(declaim (inline %row-column))
-(defun %row-column (row index)
-  (etypecase row
-    (list (nth index row))
-    (vector (aref row index))))
 
 (defun initialize-sqlite-store (store)
   "Initializes SQLite schema objects for STORE.
