@@ -112,11 +112,6 @@
     (list (nth index row))
     (vector (aref row index))))
 
-(defun cleanup-expired-sessions (store date)
-  (sqlite:execute-non-query (sqlite-store-connection store)
-                            (delete-expired-session-statement (store-table-name store))
-                            date))
-
 (defun initialize-sqlite-store (store)
   "Initializes SQLite schema objects for STORE.
 
@@ -224,3 +219,10 @@
      (sqlite-store-connection store)
      (delete-session-statement (store-table-name store))
      session-id)))
+
+(defmethod io.github.cl-sdk.wst.session:cleanup-expired-sessions ((store sqlite-store) &key date)
+  (with-slots (table-name connection)
+      store
+    (sqlite:execute-non-query connection
+                              (delete-expired-session-statement table-name)
+                              date)))
