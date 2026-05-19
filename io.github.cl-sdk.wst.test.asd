@@ -16,4 +16,5 @@
                #:io.github.cl-sdk.wst.trace-context.test
                #:io.github.cl-sdk.wst.trace-context.routing.test
                #:io.github.cl-sdk.wst.feature-flag.test
-               #:io.github.cl-sdk.wst.feature-flag.routing.test))
+               #:io.github.cl-sdk.wst.feature-flag.routing.test
+               #:io.github.cl-sdk.wst.session.sqlite.test))
