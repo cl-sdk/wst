@@ -35,22 +35,23 @@
 
 (declaim (inline find-session-by-id-statement))
 (defun find-session-by-id-statement (table-name)
-    (format nil "SELECT id, payload, created_at, updated_at, expires_at
+  (format nil "SELECT id, payload, created_at, updated_at, expires_at
                        FROM ~a
                        WHERE id = ?
                        LIMIT 1"
-            table-name))
+          table-name))
 
 (declaim (inline create-table-statement))
 (defun create-table-statement (table-name)
-    (format nil "CREATE TABLE IF NOT EXISTS ~a (
+  (format nil "CREATE TABLE IF NOT EXISTS ~a (
                       id TEXT PRIMARY KEY,
                       payload TEXT NOT NULL,
                       created_at INTEGER NOT NULL,
                       updated_at INTEGER NOT NULL,
-                      expires_at INTEGER NOT NULL
+                      expires_at INTEGER NOT NULL,
+                      last_accessed_at INTEGER NOT NULL
                     )"
-            table-name))
+          table-name))
 
 (declaim (inline create-expires-at-index-statement))
 (defun create-expires-at-index-statement (table-name)
@@ -61,18 +62,23 @@
 
 (declaim (inline insert-session-statement))
 (defun insert-session-statement (table-name)
-    (format nil "INSERT INTO ~a (id, payload, created_at, updated_at, expires_at)
- VALUES (?, ?, ?, ?, ?) returning id, payload, created_at, updated_at, expires_at"
-            table-name))
+  (format nil "INSERT INTO ~a (id, payload, created_at, updated_at, expires_at, last_accessed_at)
+ VALUES (?, ?, ?, ?, ?, ?) returning id, payload, created_at, updated_at, expires_at, last_accessed_at"
+          table-name))
 
 (declaim (inline update-session-statement))
 (defun update-session-statement (table-name)
-    (format nil "UPDATE ~a SET payload = ?, updated_at = ?, expires_at = ? WHERE id = ? RETURNING id, payload, created_at, updated_at, expires_at"
-            table-name))
+  (format nil "UPDATE ~a SET payload = ?, updated_at = ?, expires_at = ?, last_accessed_at = ? WHERE id = ? RETURNING id, payload, created_at, updated_at, expires_at, last_accessed_at"
+          table-name))
+
+(declaim (inline update-last-accessed-session-statement))
+(defun update-last-accessed-session-statement (table-name)
+  (format nil "UPDATE ~a SET updated_at = ?, last_accessed_at = ? WHERE id = ? RETURNING id, payload, created_at, updated_at, expires_at, last_accessed_at"
+          table-name))
 
 (declaim (inline renew-session-statement))
 (defun renew-session-statement (table-name)
-  (format nil "UPDATE ~a SET expires_at = ?, updated_at = ? WHERE id = ? RETURNING id, payload, created_at, updated_at, expires_at"
+  (format nil "UPDATE ~a SET expires_at = ?, updated_at = ?, last_accessed_at = ? WHERE id = ? RETURNING id, payload, created_at, updated_at, expires_at, last_accessed_at"
           table-name))
 
 (declaim (inline delete-session-statement))
@@ -118,20 +124,23 @@
  Call this once during server startup, before using STORE for session operations."
   (check-type store sqlite-store)
   (with-store-lock (store)
-    (let ((table-name (sqlite-store-table-name store)))
-      (sqlite:execute-non-query
-       (sqlite-store-connection store)
-       (create-table-statement table-name))
-      (sqlite:execute-non-query
-       (sqlite-store-connection store)
-       (create-expires-at-index-statement table-name)))))
+    (with-slots (connection table-name)
+        store
+      (let ((table-name table-name))
+        (sqlite:execute-non-query
+         connection
+         (create-table-statement table-name))
+        (sqlite:execute-non-query
+         connection
+         (create-expires-at-index-statement table-name))))))
 
-(defun %make-session-object (session-id data created-at updated-at expires-at)
+(defun %make-session-object (session-id data created-at updated-at expires-at last-accessed-at)
   (list :id session-id
         :data data
         :created-at created-at
         :updated-at updated-at
-        :expires-at expires-at))
+        :expires-at expires-at
+        :last-accessed-at last-accessed-at))
 
 (defun %find-session (store session-id)
   (car (sqlite:execute-to-list
@@ -145,7 +154,8 @@
                                  (%row-column row 1))
                         (%row-column row 2)
                         (%row-column row 3)
-                        (%row-column row 4)))
+                        (%row-column row 4)
+                        (%row-column row 5)))
 
 (defun %recover-session (store session-id)
   (let ((row (%find-session store session-id)))
@@ -154,44 +164,58 @@
 
 (defmethod io.github.cl-sdk.wst.session:create-session ((store sqlite-store) data &key session-id ttl-seconds &allow-other-keys)
   (with-store-lock (store)
-    (let* ((created-at (now))
-           (expires-at (+ created-at
-                          (or ttl-seconds
-                             (sqlite-store-max-age-seconds store)))))
-      (let ((row (car (sqlite:execute-to-list
-                       (sqlite-store-connection store)
-                       (insert-session-statement (sqlite-store-table-name store))
-                       session-id
-                       (funcall (sqlite-store-data-serializer store) data)
-                       created-at
-                       created-at
-                       expires-at))))
-        (%session-object-from-row store row)))))
+    (with-slots (connection table-name)
+        store
+      (let* ((created-at (now))
+             (expires-at (+ created-at
+                            (or ttl-seconds
+                               (sqlite-store-max-age-seconds store)))))
+        (let ((row (car (sqlite:execute-to-list
+                         connection
+                         (insert-session-statement table-name)
+                         session-id
+                         (funcall (sqlite-store-data-serializer store) data)
+                         created-at
+                         created-at
+                         expires-at
+                         created-at))))
+          (%session-object-from-row store row))))))
 
 (defmethod io.github.cl-sdk.wst.session:recover-session ((store sqlite-store) session-id &key &allow-other-keys)
-  (with-store-lock (store)
-    (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
-    (%recover-session store session-id)))
+  (let ((session (with-store-lock (store)
+                   (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
+                   (%recover-session store session-id))))
+    (when session
+     (let ((last-accessed-at (now)))
+       (%session-object-from-row
+        store
+        (car (sqlite:execute-to-list
+              (sqlite-store-connection store)
+              (update-last-accessed-session-statement (sqlite-store-table-name store))
+              last-accessed-at
+              last-accessed-at
+              (getf session :id))))))))
 
 (defmethod io.github.cl-sdk.wst.session:update-session ((store sqlite-store) session &key &allow-other-keys)
   (with-store-lock (store)
     (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
-    (let* ((id (getf session :id))
-           (data (getf session :data))
-           (updated-at (now))
-           (expires-at (or (getf session :expires-at)
-                          (+ updated-at (sqlite-store-max-age-seconds store)))))
-      (unless id
-        (error "Session object must include :id when updating."))
-      (let ((row (car (sqlite:execute-to-list
-                       (sqlite-store-connection store)
-                       (update-session-statement (sqlite-store-table-name store))
-                       (funcall (sqlite-store-data-serializer store) data)
-                       updated-at
-                       expires-at
-                       id))))
-        (%session-object-from-row store row)))))
-o
+    (with-slots (connection table-name)
+        store
+      (let* ((id (getf session :id))
+             (data (getf session :data))
+             (updated-at (now))
+             (expires-at (or (getf session :expires-at)
+                            (+ updated-at (sqlite-store-max-age-seconds store)))))
+        (let ((row (car (sqlite:execute-to-list
+                         connection
+                         (update-session-statement table-name)
+                         (funcall (sqlite-store-data-serializer store) data)
+                         updated-at
+                         expires-at
+                         updated-at
+                         id))))
+          (%session-object-from-row store row))))))
+
 (defmethod io.github.cl-sdk.wst.session:session-exists-p ((store sqlite-store) session-id &key &allow-other-keys)
   (with-store-lock (store)
     (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
@@ -202,27 +226,33 @@ o
     (io.github.cl-sdk.wst.session:cleanup-expired-sessions store :before-date (now))
     (let* ((row (%find-session store session-id)))
       (when row
-        (let* ((new-expires-at (+ (now)
-                                  (or additional-time
-                                     (sqlite-store-max-age-seconds store))))
-               (updated-row (car (sqlite:execute-to-list
-                                  (sqlite-store-connection store)
-                                  (renew-session-statement (sqlite-store-table-name store))
-                                  new-expires-at
-                                  (now)
-                                  session-id))))
-          (%session-object-from-row store updated-row))
+        (with-slots (connection table-name)
+            store
+          (let* ((updated-at (now))
+                 (new-expires-at (+ updated-at
+                                    (or additional-time
+                                       (sqlite-store-max-age-seconds store))))
+                 (updated-row (car (sqlite:execute-to-list
+                                    connection
+                                    (renew-session-statement table-name)
+                                    new-expires-at
+                                    updated-at
+                                    updated-at
+                                    session-id))))
+            (%session-object-from-row store updated-row)))
         t))))
 
 (defmethod io.github.cl-sdk.wst.session:terminate-session ((store sqlite-store) session-id &key &allow-other-keys)
   (with-store-lock (store)
-    (sqlite:execute-non-query
-     (sqlite-store-connection store)
-     (delete-session-statement (sqlite-store-table-name store))
-     session-id)))
+    (with-slots (connection table-name)
+        store
+      (sqlite:execute-non-query
+       connection
+       (delete-session-statement table-name)
+       session-id))))
 
 (defmethod io.github.cl-sdk.wst.session:cleanup-expired-sessions ((store sqlite-store) &key before-date)
-  (with-slots (table-name connection)
+  (with-slots (connection table-name)
       store
     (sqlite:execute-non-query connection
                               (delete-expired-session-statement table-name)
