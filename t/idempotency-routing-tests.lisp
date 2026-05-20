@@ -12,7 +12,7 @@
      `(:wrap
        :before ,(getf middleware :before)
        :after ,(getf middleware :after)
-       :route (:route :POST create "/" (lambda (request response)
+       :route (:route :POST create "/" ,(lambda (request response)
                                           (declare (ignore request))
                                           (incf calls)
                                           (io.github.cl-sdk.wst.routing:ok-response t response :content "ok")
@@ -29,7 +29,7 @@
      `(:wrap
        :before ,(getf middleware :before)
        :after ,(getf middleware :after)
-       :route (:route :POST create "/" (lambda (request response)
+       :route (:route :POST create "/" ,(lambda (request response)
                                           (declare (ignore request))
                                           (incf calls)
                                           (io.github.cl-sdk.wst.routing:ok-response t response :content "created")
@@ -46,7 +46,7 @@
       (5am:is (= 200 (io.github.cl-sdk.wst.routing:response-status second)))
       (5am:is (string= "created" (io.github.cl-sdk.wst.routing:response-content second)))
       (5am:is (string= "true" (getf (io.github.cl-sdk.wst.routing:response-headers second)
-                                    :idempotency-replayed)))))
+                                    :idempotency-replayed))))))
 
 (def-route-testing idempotency-middleware-rejects-conflicting-payload ()
   (let ((calls 0)
@@ -55,7 +55,7 @@
      `(:wrap
        :before ,(getf middleware :before)
        :after ,(getf middleware :after)
-       :route (:route :POST create "/" (lambda (request response)
+       :route (:route :POST create "/" ,(lambda (request response)
                                           (declare (ignore request))
                                           (incf calls)
                                           (io.github.cl-sdk.wst.routing:ok-response t response :content "created")
