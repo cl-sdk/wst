@@ -5,11 +5,6 @@
 
 (5am:in-suite wst.idempotency.suite)
 
-(5am:def-test idempotency-key-validation ()
-  (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p nil))
-  (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p ""))
-  (5am:is-true (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p "abc-123")))
-
 (5am:def-test begin-finish-then-replay ()
   (let* ((now 100)
          (engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine

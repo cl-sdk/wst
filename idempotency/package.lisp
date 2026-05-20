@@ -20,8 +20,6 @@
    #:idempotency-engine-ttl-seconds
    #:idempotency-engine-clock
    #:idempotency-engine-cache-response-p
-   #:normalize-idempotency-key
-   #:valid-idempotency-key-p
    #:make-fingerprint
    #:begin-idempotency
    #:finish-idempotency))
@@ -48,16 +46,6 @@
   clock
   cache-response-p)
 
-(defun normalize-idempotency-key (value)
-  "Trim VALUE and return a normalized key string, or NIL."
-  (when value
-    (let ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) value)))
-      (if (string= trimmed "") nil trimmed))))
-
-(defun valid-idempotency-key-p (value)
-  "Return T when VALUE is a usable idempotency key."
-  (let ((key (normalize-idempotency-key value)))
-    (and key (<= (length key) 255))))
 
 (defun make-fingerprint (&key method scope body)
   "Build a deterministic fingerprint string."
