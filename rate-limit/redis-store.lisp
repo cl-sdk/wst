@@ -29,19 +29,15 @@ Slots:
 - CONNECTION: CL-REDIS connection object used as REDIS:*CONNECTION*."))
 
 (defmacro redis-store--with-connection ((store) &body body)
-  (let ((store-var (gensym))
-        (connection-var (gensym)))
-    `(let* ((,store-var ,store)
-            (,connection-var (redis-store-connection ,store-var)))
-       (unless ,connection-var
-         (error "No Redis connection configured. Pass a CL-REDIS connection via :connection when creating the store."))
-       (let ((redis:*connection* ,connection-var))
-         ,@body))))
+  `(let ((redis:*connection* (redis-store-connection ,store)))
+     ,@body))
 
 (defun redis-store--key (store key)
-  (format nil "~a~a" (redis-store-key-prefix store) (write-to-string key :readably t)))
+  (format nil "~a~a"
+          (redis-store-key-prefix store)
+          (write-to-string key :readably t)))
 
-(defun redis-store--integer-or-nil (value)
+(defun %integer-or-nil (value)
   (cond
     ((null value) nil)
     ((integerp value) value)
@@ -53,11 +49,11 @@ Slots:
 (defmethod io.github.cl-sdk.wst.rate-limit.store:fetch-window ((store redis-store) key)
   (let* ((redis-key (redis-store--key store key))
          (reply (redis-store--with-connection (store)
-                                              (redis:red-hmget redis-key "count" "start")))
+                  (redis:red-hmget redis-key "count" "start")))
          (count-raw (and (listp reply) (first reply)))
          (start-raw (and (listp reply) (second reply)))
-         (count (redis-store--integer-or-nil count-raw))
-         (start (redis-store--integer-or-nil start-raw)))
+         (count (%integer-or-nil count-raw))
+         (start (%integer-or-nil start-raw)))
     (if (and count start)
         (values count start)
         (values nil nil))))
@@ -66,14 +62,14 @@ Slots:
   (let* ((redis-key (redis-store--key store key))
          (ttl (redis-store-window-seconds store)))
     (redis-store--with-connection (store)
-                                  (redis:red-hmset redis-key
-                                                   "count" (write-to-string count)
-                                                   "start" (write-to-string start-time)))
+      (redis:red-hmset redis-key
+                       "count" (write-to-string count)
+                       "start" (write-to-string start-time)))
     (when (and ttl (plusp ttl))
       (redis-store--with-connection (store)
-                                    (redis:red-expire redis-key ttl)))
+        (redis:red-expire redis-key ttl)))
     t))
 
 (defmethod io.github.cl-sdk.wst.rate-limit.store:delete-window ((store redis-store) key)
   (redis-store--with-connection (store)
-                                (redis:red-del (redis-store--key store key))))
+    (redis:red-del (redis-store--key store key))))
