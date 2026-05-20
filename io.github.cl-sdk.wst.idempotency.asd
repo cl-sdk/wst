@@ -8,4 +8,3 @@
   :pathname "idempotency"
   :serial t
   :components ((:file "package")))
-

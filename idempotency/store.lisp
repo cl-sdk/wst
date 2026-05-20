@@ -45,4 +45,3 @@ Returns T when completion happened, NIL otherwise."))
 
 Used when the current request should not be cached (for example 5xx).
 Returns T when release happened, NIL otherwise."))
-

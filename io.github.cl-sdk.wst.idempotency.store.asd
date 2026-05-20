@@ -7,4 +7,3 @@
   :pathname "idempotency"
   :serial t
   :components ((:file "store")))
-

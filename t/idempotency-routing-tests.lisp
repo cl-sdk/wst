@@ -93,4 +93,3 @@
       (declare (ignore resulting-b))
       (5am:is (eq :halt control-b))
       (5am:is (= 409 (io.github.cl-sdk.wst.routing:response-status response-b))))))
-

@@ -63,4 +63,3 @@ Not thread-safe."))
                (string= fingerprint (idempotency-entry-fingerprint entry)))
       (remhash key table)
       t)))
-

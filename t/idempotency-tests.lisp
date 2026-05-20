@@ -69,4 +69,3 @@
         (io.github.cl-sdk.wst.idempotency:begin-idempotency engine scope key fingerprint)
       (declare (ignore replayed))
       (5am:is (eq :started decision)))))
-

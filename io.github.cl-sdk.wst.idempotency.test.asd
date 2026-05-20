@@ -10,4 +10,3 @@
   :pathname "t"
   :serial t
   :components ((:file "idempotency-tests")))
-
