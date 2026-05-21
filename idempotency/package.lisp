@@ -91,10 +91,14 @@ empty values."
       (unless (string= "" trimmed)
         trimmed))))
 
-(defun valid-idempotency-key-p (value)
-  "Return T when VALUE normalizes to a non-empty key of at most 255 chars."
-  (let ((normalized (normalize-idempotency-key value)))
-    (and normalized (<= (length normalized) 255))))
+(defun valid-idempotency-key-p (value &key (normalized-p nil))
+  "Return T when VALUE is a non-empty key of at most 255 chars.
+
+When NORMALIZED-P is NIL (default), VALUE is normalized before validation."
+  (let ((candidate (if normalized-p value (normalize-idempotency-key value))))
+    (and (stringp candidate)
+         (not (string= "" candidate))
+         (<= (length candidate) 255))))
 
 
 (defun make-fingerprint (&key method scope body)

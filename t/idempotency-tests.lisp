@@ -10,6 +10,7 @@
   (5am:is-false (io.github.cl-sdk.wst.idempotency:normalize-idempotency-key " \t "))
   (5am:is-false (io.github.cl-sdk.wst.idempotency:normalize-idempotency-key nil))
   (5am:is-true (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p "short-key"))
+  (5am:is-true (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p "short-key" :normalized-p t))
   (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p (make-string 256 :initial-element #\a))))
 
 (5am:def-test idempotency-closure-wraps-lifecycle ()
