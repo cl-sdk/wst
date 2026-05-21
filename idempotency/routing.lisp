@@ -79,7 +79,7 @@ Returns:
              (let* ((raw-key (%request-header-ci request header-name))
                     (key (normalize-idempotency-key raw-key)))
                (cond
-                 ((and raw-key (not (valid-idempotency-key-p raw-key)))
+                 ((and raw-key (not (valid-idempotency-key-p key)))
                   (cons :halt (deny-response response missing-key-status missing-key-content)))
                  ((and require-key (not key))
                   (cons :halt (deny-response response missing-key-status missing-key-content)))
