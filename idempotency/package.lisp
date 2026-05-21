@@ -98,10 +98,13 @@ empty values."
   "Return T when VALUE is a non-empty key of at most 255 chars.
 
 When NORMALIZED-P is NIL (default), VALUE is normalized before validation."
-  (let ((candidate (if normalized-p value (normalize-idempotency-key value))))
-    (and (stringp candidate)
-         (not (string= "" candidate))
-         (<= (length candidate) 255))))
+  (if normalized-p
+      (and (stringp value)
+           (not (string= "" value))
+           (<= (length value) 255))
+      (let ((normalized (normalize-idempotency-key value)))
+        (and normalized
+             (<= (length normalized) 255)))))
 
 
 (defun make-fingerprint (&key method scope body)

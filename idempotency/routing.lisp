@@ -49,7 +49,9 @@
 
 Returns:
 - :BEFORE middleware that enforces idempotency key policy
-- :AFTER middleware that persists replayable responses"
+- :AFTER middleware that persists replayable responses
+
+When ENGINE is provided, it is used as-is by LIFECYCLE."
   (labels ((protected-method-p (request)
              (member (io.github.cl-sdk.wst.routing:request-method request)
                      methods
