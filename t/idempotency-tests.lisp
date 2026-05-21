@@ -5,6 +5,11 @@
 
 (5am:in-suite wst.idempotency.suite)
 
+(5am:def-test normalize-idempotency-key-trims-and-rejects-empty ()
+  (5am:is (string= "abc" (io.github.cl-sdk.wst.idempotency:normalize-idempotency-key "  abc  ")))
+  (5am:is-false (io.github.cl-sdk.wst.idempotency:normalize-idempotency-key " \t "))
+  (5am:is-false (io.github.cl-sdk.wst.idempotency:normalize-idempotency-key nil)))
+
 (5am:def-test idempotency-closure-wraps-lifecycle ()
   (let* ((now 100)
          (idempotency (io.github.cl-sdk.wst.idempotency:idempotency

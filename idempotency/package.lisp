@@ -21,6 +21,7 @@
    #:idempotency-engine-clock
    #:idempotency-engine-cache-response-p
    #:idempotency
+   #:normalize-idempotency-key
    #:make-fingerprint
    #:begin-idempotency
    #:finish-idempotency))
@@ -70,12 +71,24 @@ This API is independent of HTTP request/response objects."
                      :ttl-seconds ttl-seconds
                      :clock clock
                      :cache-response-p cache-response-p))))
-    (lambda (operation scope key fingerprint &optional response)
+    (lambda (operation &rest arguments)
       (ecase operation
         (:begin
-         (begin-idempotency engine scope key fingerprint))
+         (destructuring-bind (scope key fingerprint) arguments
+           (begin-idempotency engine scope key fingerprint)))
         (:finish
-         (finish-idempotency engine scope key fingerprint response))))))
+         (destructuring-bind (scope key fingerprint response) arguments
+           (finish-idempotency engine scope key fingerprint response)))))))
+
+(defun normalize-idempotency-key (value)
+  "Normalize VALUE into an idempotency key string or NIL.
+
+Trims leading and trailing whitespace and returns NIL for non-string and
+empty values."
+  (when (stringp value)
+    (let ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) value)))
+      (unless (string= "" trimmed)
+        trimmed))))
 
 
 (defun make-fingerprint (&key method scope body)

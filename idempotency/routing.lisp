@@ -77,10 +77,7 @@ Returns:
        (if (not (protected-method-p request))
            (cons :continue response)
              (let* ((raw-key (%request-header-ci request header-name))
-                    (key (and raw-key
-                              (let ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) raw-key)))
-                                (unless (string= "" trimmed)
-                                  trimmed)))))
+                    (key (normalize-idempotency-key raw-key)))
                (cond
                  ((and require-key (not key))
                   (cons :halt (deny-response response missing-key-status missing-key-content)))
