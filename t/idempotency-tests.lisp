@@ -5,6 +5,27 @@
 
 (5am:in-suite wst.idempotency.suite)
 
+(5am:def-test idempotency-closure-wraps-lifecycle ()
+  (let* ((now 100)
+         (idempotency (io.github.cl-sdk.wst.idempotency:idempotency
+                       :clock (lambda () now)))
+         (scope "checkout")
+         (key "k-closure")
+         (fingerprint "fp")
+         (cached (io.github.cl-sdk.wst.idempotency:make-cached-response
+                  :status 200
+                  :headers nil
+                  :content "ok")))
+    (multiple-value-bind (decision replayed)
+        (funcall idempotency :begin scope key fingerprint)
+      (declare (ignore replayed))
+      (5am:is (eq :started decision)))
+    (5am:is-true (funcall idempotency :finish scope key fingerprint cached))
+    (multiple-value-bind (decision replayed)
+        (funcall idempotency :begin scope key fingerprint)
+      (5am:is (eq :replay decision))
+      (5am:is (string= "ok" (io.github.cl-sdk.wst.idempotency:cached-response-content replayed))))))
+
 (5am:def-test begin-finish-then-replay ()
   (let* ((now 100)
          (engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine

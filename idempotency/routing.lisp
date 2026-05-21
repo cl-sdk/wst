@@ -43,7 +43,8 @@
                           (conflict-content "idempotency key conflicts with a different request")
                           (missing-key-status 400)
                           (missing-key-content "missing idempotency key")
-                          (engine (make-idempotency-engine :ttl-seconds ttl-seconds)))
+                          (engine nil)
+                          (lifecycle (idempotency :ttl-seconds ttl-seconds :engine engine)))
   "Create idempotency middleware pair for `wst.routing.dsl:build-webserver`.
 
 Returns:
@@ -75,21 +76,22 @@ Returns:
      (lambda (request response)
        (if (not (protected-method-p request))
            (cons :continue response)
-            (let* ((raw-key (%request-header-ci request header-name))
-                   (key (normalize-idempotency-key raw-key)))
-              (cond
-                ((and raw-key (not (valid-idempotency-key-p key)))
-                 (cons :halt (deny-response response missing-key-status missing-key-content)))
-                ((and require-key (not key))
-                 (cons :halt (deny-response response missing-key-status missing-key-content)))
-                ((not key)
-                 (cons :continue response))
-               (t
-                (let* ((scope (funcall scope-fn request))
-                       (fingerprint (funcall fingerprint-fn request scope)))
-                  (multiple-value-bind (decision replayed)
-                      (begin-idempotency engine scope key fingerprint)
-                    (ecase decision
+             (let* ((raw-key (%request-header-ci request header-name))
+                    (key (and raw-key
+                              (let ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) raw-key)))
+                                (unless (string= "" trimmed)
+                                  trimmed)))))
+               (cond
+                 ((and require-key (not key))
+                  (cons :halt (deny-response response missing-key-status missing-key-content)))
+                 ((not key)
+                  (cons :continue response))
+                (t
+                 (let* ((scope (funcall scope-fn request))
+                        (fingerprint (funcall fingerprint-fn request scope)))
+                   (multiple-value-bind (decision replayed)
+                       (funcall lifecycle :begin scope key fingerprint)
+                     (ecase decision
                       (:started
                        (io.github.cl-sdk.wst.routing:append-request-data
                         request
@@ -104,13 +106,14 @@ Returns:
                        (cons :halt (deny-response response in-progress-status in-progress-content)))
                       (:conflict
                        (cons :halt (deny-response response conflict-status conflict-content)))))))))))
-     :after
-     (lambda (request response)
-       (alexandria:when-let ((ctx (idempotency-context-of request)))
-         (finish-idempotency engine
-                             (getf ctx :scope)
-                             (getf ctx :key)
-                             (getf ctx :fingerprint)
-                             (response->cached response))
-         (io.github.cl-sdk.wst.routing:remove-request-data request :idempotency-context))
-       response))))
+      :after
+      (lambda (request response)
+        (alexandria:when-let ((ctx (idempotency-context-of request)))
+          (funcall lifecycle
+                   :finish
+                   (getf ctx :scope)
+                   (getf ctx :key)
+                   (getf ctx :fingerprint)
+                   (response->cached response))
+          (io.github.cl-sdk.wst.routing:remove-request-data request :idempotency-context))
+        response))))
