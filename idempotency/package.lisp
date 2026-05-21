@@ -29,6 +29,9 @@
 
 (in-package #:io.github.cl-sdk.wst.idempotency)
 
+(defparameter +idempotency-key-trim-chars+
+  '(#\Space #\Tab #\Newline #\Return))
+
 (defstruct cached-response
   "Serializable response snapshot for replay."
   status
@@ -87,7 +90,7 @@ This API is independent of HTTP request/response objects."
 Trims leading and trailing whitespace and returns NIL for non-string and
 empty values."
   (when (stringp value)
-    (let ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) value)))
+    (let ((trimmed (string-trim +idempotency-key-trim-chars+ value)))
       (unless (string= "" trimmed)
         trimmed))))
 
