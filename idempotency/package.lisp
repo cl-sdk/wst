@@ -22,6 +22,7 @@
    #:idempotency-engine-cache-response-p
    #:idempotency
    #:normalize-idempotency-key
+   #:valid-idempotency-key-p
    #:make-fingerprint
    #:begin-idempotency
    #:finish-idempotency))
@@ -89,6 +90,11 @@ empty values."
     (let ((trimmed (string-trim '(#\Space #\Tab #\Newline #\Return) value)))
       (unless (string= "" trimmed)
         trimmed))))
+
+(defun valid-idempotency-key-p (value)
+  "Return T when VALUE normalizes to a non-empty key of at most 255 chars."
+  (let ((normalized (normalize-idempotency-key value)))
+    (and normalized (<= (length normalized) 255))))
 
 
 (defun make-fingerprint (&key method scope body)
