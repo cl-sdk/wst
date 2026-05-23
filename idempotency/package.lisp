@@ -21,16 +21,12 @@
    #:idempotency-engine-clock
    #:idempotency-engine-cache-response-p
    #:idempotency
-   #:normalize-idempotency-key
    #:valid-idempotency-key-p
    #:make-fingerprint
    #:begin-idempotency
    #:finish-idempotency))
 
 (in-package #:io.github.cl-sdk.wst.idempotency)
-
-(defparameter +idempotency-key-trim-chars+
-  '(#\Space #\Tab #\Newline #\Return))
 
 (defstruct cached-response
   "Serializable response snapshot for replay."
@@ -84,27 +80,11 @@ This API is independent of HTTP request/response objects."
          (destructuring-bind (scope key fingerprint response) arguments
            (finish-idempotency engine scope key fingerprint response)))))))
 
-(defun normalize-idempotency-key (value)
-  "Normalize VALUE into an idempotency key string or NIL.
-
-Trims leading and trailing whitespace and returns NIL for non-string and
-empty values."
-  (when (stringp value)
-    (let ((trimmed (string-trim +idempotency-key-trim-chars+ value)))
-      (unless (string= "" trimmed)
-        trimmed))))
-
-(defun valid-idempotency-key-p (value &key (normalized-p nil))
-  "Return T when VALUE is a non-empty key of at most 255 chars.
-
-When NORMALIZED-P is NIL (default), VALUE is normalized before validation."
-  (if normalized-p
-      (and (stringp value)
-           (not (string= "" value))
-           (<= (length value) 255))
-      (let ((normalized (normalize-idempotency-key value)))
-        (and normalized
-             (<= (length normalized) 255)))))
+(defun valid-idempotency-key-p (value)
+  "Return T when VALUE is a non-empty key of at most 255 chars."
+  (and (stringp value)
+       (not (string= "" value))
+       (<= (length value) 255)))
 
 
 (defun make-fingerprint (&key method scope body)

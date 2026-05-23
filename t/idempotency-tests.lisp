@@ -5,12 +5,10 @@
 
 (5am:in-suite wst.idempotency.suite)
 
-(5am:def-test normalize-idempotency-key-trims-and-rejects-empty ()
-  (5am:is (string= "abc" (io.github.cl-sdk.wst.idempotency:normalize-idempotency-key "  abc  ")))
-  (5am:is-false (io.github.cl-sdk.wst.idempotency:normalize-idempotency-key " \t "))
-  (5am:is-false (io.github.cl-sdk.wst.idempotency:normalize-idempotency-key nil))
+(5am:def-test valid-idempotency-key-rejects-empty-and-too-long ()
+  (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p nil))
+  (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p ""))
   (5am:is-true (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p "short-key"))
-  (5am:is-true (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p "short-key" :normalized-p t))
   (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p (make-string 256 :initial-element #\a))))
 
 (5am:def-test idempotency-closure-wraps-lifecycle ()
