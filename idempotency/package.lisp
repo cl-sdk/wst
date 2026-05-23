@@ -47,7 +47,8 @@
   (:documentation "Core idempotency orchestration object.
 
 Engine subclasses can define their own storage slots and specialize
-create-entry/update-entry/delete-entry for storage behavior."))
+create-entry/update-entry/delete-entry for storage behavior.
+For a complete engine implementation, specialize all three methods."))
 
 (defclass memory-idempotency-engine (idempotency-engine)
   ((store :initarg :store
