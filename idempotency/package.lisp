@@ -14,7 +14,6 @@
    #:cached-response-content
    #:idempotency-engine
    #:make-idempotency-engine
-   #:idempotency-engine-store
    #:idempotency-engine-ttl-seconds
    #:idempotency-engine-clock
    #:idempotency-engine-cache-response-p
@@ -49,12 +48,6 @@ io.github.cl-sdk.wst.idempotency.store:create-entry,
 io.github.cl-sdk.wst.idempotency.store:update-entry and
 io.github.cl-sdk.wst.idempotency.store:delete-entry for storage behavior.
 For a complete engine implementation, specialize all three methods."))
-
-(defgeneric idempotency-engine-store (engine)
-  (:documentation "Return the storage object owned by ENGINE.
-
-Concrete engine implementations that delegate to a store object should
-define this accessor."))
 
 (defgeneric register-request (engine scope key fingerprint)
   (:documentation "Register lifecycle processing ownership for SCOPE/KEY/FINGERPRINT.
