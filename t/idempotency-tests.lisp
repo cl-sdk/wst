@@ -7,7 +7,9 @@
 
 (defclass test-idempotency-engine (io.github.cl-sdk.wst.idempotency:idempotency-engine)
   ((calls :initform nil
-          :accessor test-idempotency-engine-calls)))
+          :accessor test-idempotency-engine-calls)
+   (custom-storage :initarg :custom-storage
+                   :reader test-idempotency-engine-custom-storage)))
 
 (defmethod io.github.cl-sdk.wst.idempotency.store:create-entry ((engine test-idempotency-engine)
                                                                 key
@@ -117,7 +119,8 @@
       (5am:is (eq :started decision)))))
 
 (5am:def-test register-store-drop-can-be-specialized-on-engine ()
-  (let ((engine (make-instance 'test-idempotency-engine)))
+  (let ((engine (make-instance 'test-idempotency-engine
+                               :custom-storage (make-hash-table))))
     (multiple-value-bind (decision replayed)
         (io.github.cl-sdk.wst.idempotency:register-request engine "scope" "key" "fingerprint")
       (declare (ignore replayed))
@@ -130,5 +133,6 @@
                    :content "ok")))
     (5am:is-true (io.github.cl-sdk.wst.idempotency:drop-request
                   engine "scope" "key" "fingerprint"))
+    (5am:is (hash-table-p (test-idempotency-engine-custom-storage engine)))
     (5am:is (equal '(:delete :update :create)
                    (test-idempotency-engine-calls engine)))))

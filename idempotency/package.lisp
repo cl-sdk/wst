@@ -34,10 +34,7 @@
   content)
 
 (defclass idempotency-engine ()
-  ((store :initarg :store
-          :initform (make-instance 'memory-store)
-          :reader idempotency-engine-store)
-   (ttl-seconds :initarg :ttl-seconds
+  ((ttl-seconds :initarg :ttl-seconds
                 :initform 86400
                 :reader idempotency-engine-ttl-seconds)
    (clock :initarg :clock
@@ -47,7 +44,15 @@
                      :initform (lambda (response)
                                  (< (cached-response-status response) 500))
                      :reader idempotency-engine-cache-response-p))
-  (:documentation "Core idempotency orchestration object."))
+  (:documentation "Core idempotency orchestration object.
+
+Engine subclasses can define their own storage slots and specialize
+create-entry/update-entry/delete-entry for storage behavior."))
+
+(defclass memory-idempotency-engine (idempotency-engine)
+  ((store :initarg :store
+          :initform (make-instance 'memory-store)
+          :reader idempotency-engine-store)))
 
 (defun make-idempotency-engine (&key
                                   (store (make-instance 'memory-store))
@@ -55,7 +60,7 @@
                                   (clock #'get-universal-time)
                                   (cache-response-p (lambda (response)
                                                       (< (cached-response-status response) 500))))
-  (make-instance 'idempotency-engine
+  (make-instance 'memory-idempotency-engine
                  :store store
                  :ttl-seconds ttl-seconds
                  :clock clock
@@ -76,7 +81,7 @@ Returns two values:
 - DECISION: one of :started, :replay, :in-progress, :conflict
 - PAYLOAD: cached-response for :replay, NIL otherwise."))
 
-(defmethod create-entry ((engine idempotency-engine) key fingerprint ttl-seconds now)
+(defmethod create-entry ((engine memory-idempotency-engine) key fingerprint ttl-seconds now)
   (create-entry (idempotency-engine-store engine)
                 key
                 fingerprint
@@ -101,7 +106,7 @@ Returns two values:
 
 Returns T when completion happened, NIL otherwise."))
 
-(defmethod update-entry ((engine idempotency-engine) key fingerprint response ttl-seconds now)
+(defmethod update-entry ((engine memory-idempotency-engine) key fingerprint response ttl-seconds now)
   (update-entry (idempotency-engine-store engine)
                 key
                 fingerprint
@@ -122,7 +127,7 @@ Returns T when completion happened, NIL otherwise."))
 
 Returns T when release happened, NIL otherwise."))
 
-(defmethod delete-entry ((engine idempotency-engine) key fingerprint)
+(defmethod delete-entry ((engine memory-idempotency-engine) key fingerprint)
   (delete-entry (idempotency-engine-store engine)
                 key
                 fingerprint))
