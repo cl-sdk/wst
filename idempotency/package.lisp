@@ -125,7 +125,6 @@ Returns two values:
 When response passes CACHE-RESPONSE-P policy, it is persisted for replay.
 Otherwise the processing marker is released."
   (check-type engine idempotency-engine)
-  (check-type scope t)
   (check-type key string)
   (check-type fingerprint string)
   (check-type response cached-response)
