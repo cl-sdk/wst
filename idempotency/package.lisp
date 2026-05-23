@@ -81,7 +81,9 @@ This API is independent of HTTP request/response objects."
            (finish-idempotency engine scope key fingerprint response)))))))
 
 (defun valid-idempotency-key-p (value)
-  "Return T when VALUE is a non-empty key of at most 255 chars."
+  "Return T when VALUE is a non-empty key of at most 255 chars.
+
+Key formatting/normalization is caller-managed."
   (and (stringp value)
        (not (string= "" value))
        (<= (length value) 255)))
