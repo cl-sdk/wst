@@ -15,7 +15,11 @@ Suitable for single-process scenarios; not thread-safe.")
           :initform (make-hash-table :test #'equal)
           :reader memory-idempotency-engine-table))
   (:documentation "Hash-table-backed in-memory idempotency engine.
-Not thread-safe."))
+Not thread-safe.
+
+Instantiate with MAKE-INSTANCE and optional initargs:
+- :table (subclass slot)
+- :ttl-seconds, :clock, :cache-response-p (inherited from idempotency-engine)."))
 
 (defun %expired-p (entry now)
   (and entry
