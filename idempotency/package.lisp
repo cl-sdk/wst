@@ -53,17 +53,16 @@ For a complete engine implementation, specialize all three methods."))
 (defgeneric idempotency-engine-store (engine)
   (:documentation "Return the storage object owned by ENGINE.
 
-Subclasses may define this accessor when they keep a concrete store slot."))
+Concrete engine implementations that delegate to a store object should
+define this accessor."))
 
 (defun make-idempotency-engine (&key
                                   (ttl-seconds 86400)
                                   (clock #'get-universal-time)
                                   (cache-response-p (lambda (response)
                                                       (< (cached-response-status response) 500))))
-  (make-instance 'idempotency-engine
-                 :ttl-seconds ttl-seconds
-                 :clock clock
-                 :cache-response-p cache-response-p))
+  (declare (ignore ttl-seconds clock cache-response-p))
+  (error "No default store-backed idempotency engine is provided in io.github.cl-sdk.wst.idempotency. Use a concrete engine implementation such as io.github.cl-sdk.wst.idempotency.memory-store:make-memory-idempotency-engine or your own subclass."))
 
 (defun valid-idempotency-key-p (value)
   "Return T when VALUE is a non-empty key of at most 255 chars.
