@@ -19,7 +19,7 @@ Not thread-safe."))
        (idempotency-entry-expires-at entry)
        (>= now (idempotency-entry-expires-at entry))))
 
-(defmethod store-claim-idempotency ((store memory-store) key fingerprint ttl-seconds now)
+(defmethod create-entry ((store memory-store) key fingerprint ttl-seconds now)
   (let* ((table (memory-store-table store))
          (entry (gethash key table)))
     (when (%expired-p entry now)
@@ -41,7 +41,7 @@ Not thread-safe."))
       (t
        (values :in-progress entry)))))
 
-(defmethod store-complete-idempotency ((store memory-store) key fingerprint response ttl-seconds now)
+(defmethod update-entry ((store memory-store) key fingerprint response ttl-seconds now)
   (let* ((table (memory-store-table store))
          (entry (gethash key table)))
     (when (%expired-p entry now)
@@ -55,7 +55,7 @@ Not thread-safe."))
             (idempotency-entry-expires-at entry) (+ now ttl-seconds))
       t)))
 
-(defmethod store-release-idempotency ((store memory-store) key fingerprint)
+(defmethod delete-entry ((store memory-store) key fingerprint)
   (let* ((table (memory-store-table store))
          (entry (gethash key table)))
     (when (and entry

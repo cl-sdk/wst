@@ -2,9 +2,9 @@
   (:use #:cl)
   (:documentation "Core idempotency-key primitives independent of HTTP objects.")
   (:import-from #:io.github.cl-sdk.wst.idempotency.store
-                #:store-claim-idempotency
-                #:store-complete-idempotency
-                #:store-release-idempotency
+                #:create-entry
+                #:update-entry
+                #:delete-entry
                 #:idempotency-entry-response)
   (:import-from #:io.github.cl-sdk.wst.idempotency.memory-store
                 #:memory-store)
@@ -21,12 +21,9 @@
    #:idempotency-engine-clock
    #:idempotency-engine-cache-response-p
    #:valid-idempotency-key-p
-   #:make-fingerprint
-   #:claim-idempotency
-   #:complete-idempotency
-   #:release-idempotency
-   #:begin-idempotency
-   #:finish-idempotency))
+   #:register-request
+   #:drop-request
+   #:store-response))
 
 (in-package #:io.github.cl-sdk.wst.idempotency)
 
@@ -58,76 +55,45 @@ Key formatting/normalization is caller-managed."
        (not (string= "" value))
        (<= (length value) 255)))
 
-
-(defun make-fingerprint (&key method scope body)
-  "Build a deterministic fingerprint string."
-  (with-output-to-string (stream)
-    (prin1 (list :method method :scope scope :body body) stream)))
-
-(defgeneric claim-idempotency (engine scope key fingerprint)
-  (:documentation "Claim lifecycle processing ownership for SCOPE/KEY/FINGERPRINT.
+(defgeneric register-request (engine scope key fingerprint)
+  (:documentation "Register lifecycle processing ownership for SCOPE/KEY/FINGERPRINT.
 
 Returns two values:
 - DECISION: one of :started, :replay, :in-progress, :conflict
 - PAYLOAD: cached-response for :replay, NIL otherwise."))
 
-(defmethod claim-idempotency ((engine idempotency-engine) scope key fingerprint)
+(defmethod register-request ((engine idempotency-engine) scope key fingerprint)
   (multiple-value-bind (status entry)
-      (store-claim-idempotency (idempotency-engine-store engine)
-                               (list scope key)
-                               fingerprint
-                               (idempotency-engine-ttl-seconds engine)
-                               (funcall (idempotency-engine-clock engine)))
+      (create-entry (idempotency-engine-store engine)
+                    (list scope key)
+                    fingerprint
+                    (idempotency-engine-ttl-seconds engine)
+                    (funcall (idempotency-engine-clock engine)))
     (ecase status
       (:started (values :started nil))
       (:in-progress (values :in-progress nil))
       (:conflict (values :conflict nil))
       (:replay (values :replay (idempotency-entry-response entry))))))
 
-(defgeneric complete-idempotency (engine scope key fingerprint response)
+(defgeneric store-response (engine scope key fingerprint response)
   (:documentation "Persist RESPONSE for SCOPE/KEY/FINGERPRINT.
 
 Returns T when completion happened, NIL otherwise."))
 
-(defmethod complete-idempotency ((engine idempotency-engine) scope key fingerprint response)
-  (store-complete-idempotency (idempotency-engine-store engine)
-                              (list scope key)
-                              fingerprint
-                              response
-                              (idempotency-engine-ttl-seconds engine)
-                              (funcall (idempotency-engine-clock engine))))
+(defmethod store-response ((engine idempotency-engine) scope key fingerprint response)
+  (update-entry (idempotency-engine-store engine)
+                (list scope key)
+                fingerprint
+                response
+                (idempotency-engine-ttl-seconds engine)
+                (funcall (idempotency-engine-clock engine))))
 
-(defgeneric release-idempotency (engine scope key fingerprint)
+(defgeneric drop-request (engine scope key fingerprint)
   (:documentation "Release processing lock for SCOPE/KEY/FINGERPRINT.
 
 Returns T when release happened, NIL otherwise."))
 
-(defmethod release-idempotency ((engine idempotency-engine) scope key fingerprint)
-  (store-release-idempotency (idempotency-engine-store engine)
-                             (list scope key)
-                             fingerprint))
-
-(defun begin-idempotency (engine scope key fingerprint)
-  "Begin lifecycle for (SCOPE, KEY, FINGERPRINT).
-
-Returns two values:
-- DECISION: one of :started, :replay, :in-progress, :conflict
-- PAYLOAD:  cached-response for :replay, NIL otherwise."
-  (check-type engine idempotency-engine)
-  (check-type scope t)
-  (check-type key string)
-  (check-type fingerprint string)
-  (claim-idempotency engine scope key fingerprint))
-
-(defun finish-idempotency (engine scope key fingerprint response)
-  "Finalize lifecycle for a started key.
-
-When response passes CACHE-RESPONSE-P policy, it is persisted for replay.
-Otherwise the processing marker is released."
-  (check-type engine idempotency-engine)
-  (check-type key string)
-  (check-type fingerprint string)
-  (check-type response cached-response)
-  (if (funcall (idempotency-engine-cache-response-p engine) response)
-      (complete-idempotency engine scope key fingerprint response)
-      (release-idempotency engine scope key fingerprint)))
+(defmethod drop-request ((engine idempotency-engine) scope key fingerprint)
+  (delete-entry (idempotency-engine-store engine)
+                (list scope key)
+                fingerprint))

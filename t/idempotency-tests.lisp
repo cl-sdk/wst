@@ -11,7 +11,7 @@
   (5am:is-true (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p "short-key"))
   (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p (make-string 256 :initial-element #\a))))
 
-(5am:def-test main-api-claim-complete-works ()
+(5am:def-test main-api-register-store-response-works ()
   (let* ((now 100)
          (engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine
                   :clock (lambda () now)))
@@ -23,16 +23,16 @@
                   :headers nil
                   :content "ok")))
     (multiple-value-bind (decision replayed)
-        (io.github.cl-sdk.wst.idempotency:claim-idempotency engine scope key fingerprint)
+        (io.github.cl-sdk.wst.idempotency:register-request engine scope key fingerprint)
       (declare (ignore replayed))
       (5am:is (eq :started decision)))
-    (5am:is-true (io.github.cl-sdk.wst.idempotency:complete-idempotency engine scope key fingerprint cached))
+    (5am:is-true (io.github.cl-sdk.wst.idempotency:store-response engine scope key fingerprint cached))
     (multiple-value-bind (decision replayed)
-        (io.github.cl-sdk.wst.idempotency:claim-idempotency engine scope key fingerprint)
+        (io.github.cl-sdk.wst.idempotency:register-request engine scope key fingerprint)
       (5am:is (eq :replay decision))
       (5am:is (string= "ok" (io.github.cl-sdk.wst.idempotency:cached-response-content replayed))))))
 
-(5am:def-test begin-finish-then-replay ()
+(5am:def-test register-store-then-replay ()
   (let* ((now 100)
          (engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine
                   :clock (lambda () now)))
@@ -44,17 +44,17 @@
                   :headers '(:content-type "text/plain")
                   :content "ok")))
     (multiple-value-bind (decision replayed)
-        (io.github.cl-sdk.wst.idempotency:begin-idempotency engine scope key fingerprint)
+        (io.github.cl-sdk.wst.idempotency:register-request engine scope key fingerprint)
       (declare (ignore replayed))
       (5am:is (eq :started decision)))
     (multiple-value-bind (decision replayed)
-        (io.github.cl-sdk.wst.idempotency:begin-idempotency engine scope key fingerprint)
+        (io.github.cl-sdk.wst.idempotency:register-request engine scope key fingerprint)
       (declare (ignore replayed))
       (5am:is (eq :in-progress decision)))
-    (5am:is-true (io.github.cl-sdk.wst.idempotency:finish-idempotency
+    (5am:is-true (io.github.cl-sdk.wst.idempotency:store-response
                   engine scope key fingerprint cached))
     (multiple-value-bind (decision replayed)
-        (io.github.cl-sdk.wst.idempotency:begin-idempotency engine scope key fingerprint)
+        (io.github.cl-sdk.wst.idempotency:register-request engine scope key fingerprint)
       (5am:is (eq :replay decision))
       (5am:is (= 200 (io.github.cl-sdk.wst.idempotency:cached-response-status replayed)))
       (5am:is (string= "ok" (io.github.cl-sdk.wst.idempotency:cached-response-content replayed))))))
@@ -62,32 +62,26 @@
 (5am:def-test key-conflict-when-fingerprint-differs ()
   (let ((engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine)))
     (multiple-value-bind (decision replayed)
-        (io.github.cl-sdk.wst.idempotency:begin-idempotency engine "scope" "same-key" "fingerprint-a")
+        (io.github.cl-sdk.wst.idempotency:register-request engine "scope" "same-key" "fingerprint-a")
       (declare (ignore replayed))
       (5am:is (eq :started decision)))
     (multiple-value-bind (decision replayed)
-        (io.github.cl-sdk.wst.idempotency:begin-idempotency engine "scope" "same-key" "fingerprint-b")
+        (io.github.cl-sdk.wst.idempotency:register-request engine "scope" "same-key" "fingerprint-b")
       (declare (ignore replayed))
       (5am:is (eq :conflict decision)))))
 
-(5am:def-test non-cacheable-response-releases-key ()
-  (let* ((engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine
-                  :cache-response-p (lambda (response)
-                                      (< (io.github.cl-sdk.wst.idempotency:cached-response-status response) 500))))
+(5am:def-test drop-request-releases-key ()
+  (let* ((engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine))
          (scope "scope")
          (key "key")
-         (fingerprint "f")
-         (server-error (io.github.cl-sdk.wst.idempotency:make-cached-response
-                        :status 500
-                        :headers nil
-                        :content "boom")))
+         (fingerprint "f"))
     (multiple-value-bind (decision replayed)
-        (io.github.cl-sdk.wst.idempotency:begin-idempotency engine scope key fingerprint)
+        (io.github.cl-sdk.wst.idempotency:register-request engine scope key fingerprint)
       (declare (ignore replayed))
       (5am:is (eq :started decision)))
-    (5am:is-true (io.github.cl-sdk.wst.idempotency:finish-idempotency
-                  engine scope key fingerprint server-error))
+    (5am:is-true (io.github.cl-sdk.wst.idempotency:drop-request
+                  engine scope key fingerprint))
     (multiple-value-bind (decision replayed)
-        (io.github.cl-sdk.wst.idempotency:begin-idempotency engine scope key fingerprint)
+        (io.github.cl-sdk.wst.idempotency:register-request engine scope key fingerprint)
       (declare (ignore replayed))
       (5am:is (eq :started decision)))))
