@@ -56,6 +56,23 @@ For a complete engine implementation, specialize all three methods."))
 Concrete engine implementations that delegate to a store object should
 define this accessor."))
 
+(defgeneric register-request (engine scope key fingerprint)
+  (:documentation "Register lifecycle processing ownership for SCOPE/KEY/FINGERPRINT.
+
+Returns two values:
+- DECISION: one of :started, :replay, :in-progress, :conflict
+- PAYLOAD: cached-response for :replay, NIL otherwise."))
+
+(defgeneric store-response (engine scope key fingerprint response)
+  (:documentation "Persist RESPONSE for SCOPE/KEY/FINGERPRINT.
+
+Returns T when completion happened, NIL otherwise."))
+
+(defgeneric drop-request (engine scope key fingerprint)
+  (:documentation "Release processing lock for SCOPE/KEY/FINGERPRINT.
+
+Returns T when release happened, NIL otherwise."))
+
 (defun make-idempotency-engine ()
   (error "No default store-backed idempotency engine is provided in io.github.cl-sdk.wst.idempotency. Use a concrete engine implementation such as io.github.cl-sdk.wst.idempotency.memory-store:make-memory-idempotency-engine or your own subclass."))
 
@@ -66,13 +83,6 @@ Key formatting/normalization is caller-managed."
   (and (stringp value)
        (not (string= "" value))
        (<= (length value) 255)))
-
-(defgeneric register-request (engine scope key fingerprint)
-  (:documentation "Register lifecycle processing ownership for SCOPE/KEY/FINGERPRINT.
-
-Returns two values:
-- DECISION: one of :started, :replay, :in-progress, :conflict
-- PAYLOAD: cached-response for :replay, NIL otherwise."))
 
 (defmethod register-request ((engine idempotency-engine) scope key fingerprint)
   (multiple-value-bind (status entry)
@@ -87,11 +97,6 @@ Returns two values:
       (:conflict (values :conflict nil))
       (:replay (values :replay (idempotency-entry-response entry))))))
 
-(defgeneric store-response (engine scope key fingerprint response)
-  (:documentation "Persist RESPONSE for SCOPE/KEY/FINGERPRINT.
-
-Returns T when completion happened, NIL otherwise."))
-
 (defmethod store-response ((engine idempotency-engine) scope key fingerprint response)
   (update-entry engine
                 (list scope key)
@@ -99,11 +104,6 @@ Returns T when completion happened, NIL otherwise."))
                 response
                 (idempotency-engine-ttl-seconds engine)
                 (funcall (idempotency-engine-clock engine))))
-
-(defgeneric drop-request (engine scope key fingerprint)
-  (:documentation "Release processing lock for SCOPE/KEY/FINGERPRINT.
-
-Returns T when release happened, NIL otherwise."))
 
 (defmethod drop-request ((engine idempotency-engine) scope key fingerprint)
   (delete-entry engine
