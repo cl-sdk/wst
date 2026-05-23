@@ -6,8 +6,7 @@
 
 Suitable for single-process scenarios; not thread-safe.")
   (:export
-   #:memory-idempotency-engine
-   #:make-memory-idempotency-engine))
+   #:memory-idempotency-engine))
 
 (in-package #:io.github.cl-sdk.wst.idempotency.memory-store)
 
@@ -17,18 +16,6 @@ Suitable for single-process scenarios; not thread-safe.")
           :reader memory-idempotency-engine-table))
   (:documentation "Hash-table-backed in-memory idempotency engine.
 Not thread-safe."))
-
-(defun make-memory-idempotency-engine (&key
-                                         (table (make-hash-table :test #'equal))
-                                         (ttl-seconds 86400)
-                                         (clock #'get-universal-time)
-                                         (cache-response-p (lambda (response)
-                                                             (< (io.github.cl-sdk.wst.idempotency:cached-response-status response) 500))))
-  (make-instance 'memory-idempotency-engine
-                 :table table
-                 :ttl-seconds ttl-seconds
-                 :clock clock
-                 :cache-response-p cache-response-p))
 
 (defun %expired-p (entry now)
   (and entry

@@ -74,7 +74,7 @@ Returns T when completion happened, NIL otherwise."))
 Returns T when release happened, NIL otherwise."))
 
 (defun make-idempotency-engine ()
-  (error "No default store-backed idempotency engine is provided in io.github.cl-sdk.wst.idempotency. Use a concrete engine implementation such as io.github.cl-sdk.wst.idempotency.memory-store:make-memory-idempotency-engine or your own subclass."))
+  (error "No default store-backed idempotency engine is provided in io.github.cl-sdk.wst.idempotency. Use a concrete engine implementation such as (make-instance 'io.github.cl-sdk.wst.idempotency.memory-store:memory-idempotency-engine) or your own subclass."))
 
 (defun valid-idempotency-key-p (value)
   "Return T when VALUE is a non-empty key of at most 255 chars.
