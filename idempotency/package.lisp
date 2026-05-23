@@ -6,8 +6,6 @@
                 #:update-entry
                 #:delete-entry
                 #:idempotency-entry-response)
-  (:import-from #:io.github.cl-sdk.wst.idempotency.memory-store
-                #:memory-store)
   (:export
    #:cached-response
    #:make-cached-response
@@ -52,19 +50,17 @@ io.github.cl-sdk.wst.idempotency.store:update-entry and
 io.github.cl-sdk.wst.idempotency.store:delete-entry for storage behavior.
 For a complete engine implementation, specialize all three methods."))
 
-(defclass memory-idempotency-engine (idempotency-engine)
-  ((store :initarg :store
-          :initform (make-instance 'memory-store)
-          :reader idempotency-engine-store)))
+(defgeneric idempotency-engine-store (engine)
+  (:documentation "Return the storage object owned by ENGINE.
+
+Subclasses may define this accessor when they keep a concrete store slot."))
 
 (defun make-idempotency-engine (&key
-                                  (store (make-instance 'memory-store))
                                   (ttl-seconds 86400)
                                   (clock #'get-universal-time)
                                   (cache-response-p (lambda (response)
                                                       (< (cached-response-status response) 500))))
-  (make-instance 'memory-idempotency-engine
-                 :store store
+  (make-instance 'idempotency-engine
                  :ttl-seconds ttl-seconds
                  :clock clock
                  :cache-response-p cache-response-p))
@@ -84,13 +80,6 @@ Returns two values:
 - DECISION: one of :started, :replay, :in-progress, :conflict
 - PAYLOAD: cached-response for :replay, NIL otherwise."))
 
-(defmethod create-entry ((engine memory-idempotency-engine) key fingerprint ttl-seconds now)
-  (create-entry (idempotency-engine-store engine)
-                key
-                fingerprint
-                ttl-seconds
-                now))
-
 (defmethod register-request ((engine idempotency-engine) scope key fingerprint)
   (multiple-value-bind (status entry)
       (create-entry engine
@@ -109,14 +98,6 @@ Returns two values:
 
 Returns T when completion happened, NIL otherwise."))
 
-(defmethod update-entry ((engine memory-idempotency-engine) key fingerprint response ttl-seconds now)
-  (update-entry (idempotency-engine-store engine)
-                key
-                fingerprint
-                response
-                ttl-seconds
-                now))
-
 (defmethod store-response ((engine idempotency-engine) scope key fingerprint response)
   (update-entry engine
                 (list scope key)
@@ -129,11 +110,6 @@ Returns T when completion happened, NIL otherwise."))
   (:documentation "Release processing lock for SCOPE/KEY/FINGERPRINT.
 
 Returns T when release happened, NIL otherwise."))
-
-(defmethod delete-entry ((engine memory-idempotency-engine) key fingerprint)
-  (delete-entry (idempotency-engine-store engine)
-                key
-                fingerprint))
 
 (defmethod drop-request ((engine idempotency-engine) scope key fingerprint)
   (delete-entry engine

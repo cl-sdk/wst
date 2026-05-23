@@ -45,7 +45,7 @@
 
 (5am:def-test main-api-register-store-response-works ()
   (let* ((now 100)
-         (engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine
+         (engine (io.github.cl-sdk.wst.idempotency.memory-store:make-memory-idempotency-engine
                   :clock (lambda () now)))
          (scope "checkout")
          (key "k-main")
@@ -66,7 +66,7 @@
 
 (5am:def-test register-store-then-replay ()
   (let* ((now 100)
-         (engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine
+         (engine (io.github.cl-sdk.wst.idempotency.memory-store:make-memory-idempotency-engine
                   :clock (lambda () now)))
          (scope "checkout")
          (key "k1")
@@ -92,7 +92,7 @@
       (5am:is (string= "ok" (io.github.cl-sdk.wst.idempotency:cached-response-content replayed))))))
 
 (5am:def-test key-conflict-when-fingerprint-differs ()
-  (let ((engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine)))
+  (let ((engine (io.github.cl-sdk.wst.idempotency.memory-store:make-memory-idempotency-engine)))
     (multiple-value-bind (decision replayed)
         (io.github.cl-sdk.wst.idempotency:register-request engine "scope" "same-key" "fingerprint-a")
       (declare (ignore replayed))
@@ -103,7 +103,7 @@
       (5am:is (eq :conflict decision)))))
 
 (5am:def-test drop-request-releases-key ()
-  (let* ((engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine))
+  (let* ((engine (io.github.cl-sdk.wst.idempotency.memory-store:make-memory-idempotency-engine))
          (scope "scope")
          (key "key")
          (fingerprint "f"))

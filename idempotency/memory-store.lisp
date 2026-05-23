@@ -1,10 +1,15 @@
 (defpackage #:io.github.cl-sdk.wst.idempotency.memory-store
   (:use #:cl #:io.github.cl-sdk.wst.idempotency.store)
+  (:import-from #:io.github.cl-sdk.wst.idempotency
+                #:idempotency-engine
+                #:idempotency-engine-store)
   (:documentation "In-memory idempotency backend.
 
 Suitable for single-process scenarios; not thread-safe.")
   (:export
-   #:memory-store))
+   #:memory-store
+   #:memory-idempotency-engine
+   #:make-memory-idempotency-engine))
 
 (in-package #:io.github.cl-sdk.wst.idempotency.memory-store)
 
@@ -13,6 +18,23 @@ Suitable for single-process scenarios; not thread-safe.")
           :reader memory-store-table))
   (:documentation "Hash-table-backed idempotency store.
 Not thread-safe."))
+
+(defclass memory-idempotency-engine (idempotency-engine)
+  ((store :initarg :store
+          :initform (make-instance 'memory-store)
+          :reader idempotency-engine-store)))
+
+(defun make-memory-idempotency-engine (&key
+                                         (store (make-instance 'memory-store))
+                                         (ttl-seconds 86400)
+                                         (clock #'get-universal-time)
+                                         (cache-response-p (lambda (response)
+                                                             (< (io.github.cl-sdk.wst.idempotency:cached-response-status response) 500))))
+  (make-instance 'memory-idempotency-engine
+                 :store store
+                 :ttl-seconds ttl-seconds
+                 :clock clock
+                 :cache-response-p cache-response-p))
 
 (defun %expired-p (entry now)
   (and entry
@@ -41,6 +63,13 @@ Not thread-safe."))
       (t
        (values :in-progress entry)))))
 
+(defmethod create-entry ((engine memory-idempotency-engine) key fingerprint ttl-seconds now)
+  (create-entry (idempotency-engine-store engine)
+                key
+                fingerprint
+                ttl-seconds
+                now))
+
 (defmethod update-entry ((store memory-store) key fingerprint response ttl-seconds now)
   (let* ((table (memory-store-table store))
          (entry (gethash key table)))
@@ -50,10 +79,18 @@ Not thread-safe."))
     (when (and entry
                (eq :processing (idempotency-entry-state entry))
                (string= fingerprint (idempotency-entry-fingerprint entry)))
-      (setf (idempotency-entry-state entry) :completed
-            (idempotency-entry-response entry) response
-            (idempotency-entry-expires-at entry) (+ now ttl-seconds))
-      t)))
+       (setf (idempotency-entry-state entry) :completed
+             (idempotency-entry-response entry) response
+             (idempotency-entry-expires-at entry) (+ now ttl-seconds))
+       t)))
+
+(defmethod update-entry ((engine memory-idempotency-engine) key fingerprint response ttl-seconds now)
+  (update-entry (idempotency-engine-store engine)
+                key
+                fingerprint
+                response
+                ttl-seconds
+                now))
 
 (defmethod delete-entry ((store memory-store) key fingerprint)
   (let* ((table (memory-store-table store))
@@ -63,3 +100,8 @@ Not thread-safe."))
                (string= fingerprint (idempotency-entry-fingerprint entry)))
       (remhash key table)
       t)))
+
+(defmethod delete-entry ((engine memory-idempotency-engine) key fingerprint)
+  (delete-entry (idempotency-engine-store engine)
+                key
+                fingerprint))
