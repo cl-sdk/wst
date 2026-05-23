@@ -76,9 +76,16 @@ Returns two values:
 - DECISION: one of :started, :replay, :in-progress, :conflict
 - PAYLOAD: cached-response for :replay, NIL otherwise."))
 
+(defmethod create-entry ((engine idempotency-engine) key fingerprint ttl-seconds now)
+  (create-entry (idempotency-engine-store engine)
+                key
+                fingerprint
+                ttl-seconds
+                now))
+
 (defmethod register-request ((engine idempotency-engine) scope key fingerprint)
   (multiple-value-bind (status entry)
-      (create-entry (idempotency-engine-store engine)
+      (create-entry engine
                     (list scope key)
                     fingerprint
                     (idempotency-engine-ttl-seconds engine)
@@ -94,8 +101,16 @@ Returns two values:
 
 Returns T when completion happened, NIL otherwise."))
 
-(defmethod store-response ((engine idempotency-engine) scope key fingerprint response)
+(defmethod update-entry ((engine idempotency-engine) key fingerprint response ttl-seconds now)
   (update-entry (idempotency-engine-store engine)
+                key
+                fingerprint
+                response
+                ttl-seconds
+                now))
+
+(defmethod store-response ((engine idempotency-engine) scope key fingerprint response)
+  (update-entry engine
                 (list scope key)
                 fingerprint
                 response
@@ -107,7 +122,12 @@ Returns T when completion happened, NIL otherwise."))
 
 Returns T when release happened, NIL otherwise."))
 
-(defmethod drop-request ((engine idempotency-engine) scope key fingerprint)
+(defmethod delete-entry ((engine idempotency-engine) key fingerprint)
   (delete-entry (idempotency-engine-store engine)
+                key
+                fingerprint))
+
+(defmethod drop-request ((engine idempotency-engine) scope key fingerprint)
+  (delete-entry engine
                 (list scope key)
                 fingerprint))

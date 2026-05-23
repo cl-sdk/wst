@@ -5,6 +5,36 @@
 
 (5am:in-suite wst.idempotency.suite)
 
+(defclass test-idempotency-engine (io.github.cl-sdk.wst.idempotency:idempotency-engine)
+  ((calls :initform nil
+          :accessor test-idempotency-engine-calls)))
+
+(defmethod io.github.cl-sdk.wst.idempotency.store:create-entry ((engine test-idempotency-engine)
+                                                                key
+                                                                fingerprint
+                                                                ttl-seconds
+                                                                now)
+  (declare (ignore key fingerprint ttl-seconds now))
+  (push :create (test-idempotency-engine-calls engine))
+  (values :started nil))
+
+(defmethod io.github.cl-sdk.wst.idempotency.store:update-entry ((engine test-idempotency-engine)
+                                                                key
+                                                                fingerprint
+                                                                response
+                                                                ttl-seconds
+                                                                now)
+  (declare (ignore key fingerprint response ttl-seconds now))
+  (push :update (test-idempotency-engine-calls engine))
+  t)
+
+(defmethod io.github.cl-sdk.wst.idempotency.store:delete-entry ((engine test-idempotency-engine)
+                                                                key
+                                                                fingerprint)
+  (declare (ignore key fingerprint))
+  (push :delete (test-idempotency-engine-calls engine))
+  t)
+
 (5am:def-test valid-idempotency-key-rejects-empty-and-too-long ()
   (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p nil))
   (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p ""))
@@ -85,3 +115,20 @@
         (io.github.cl-sdk.wst.idempotency:register-request engine scope key fingerprint)
       (declare (ignore replayed))
       (5am:is (eq :started decision)))))
+
+(5am:def-test register-store-drop-can-be-specialized-on-engine ()
+  (let ((engine (make-instance 'test-idempotency-engine)))
+    (multiple-value-bind (decision replayed)
+        (io.github.cl-sdk.wst.idempotency:register-request engine "scope" "key" "fingerprint")
+      (declare (ignore replayed))
+      (5am:is (eq :started decision)))
+    (5am:is-true (io.github.cl-sdk.wst.idempotency:store-response
+                  engine "scope" "key" "fingerprint"
+                  (io.github.cl-sdk.wst.idempotency:make-cached-response
+                   :status 200
+                   :headers nil
+                   :content "ok")))
+    (5am:is-true (io.github.cl-sdk.wst.idempotency:drop-request
+                  engine "scope" "key" "fingerprint"))
+    (5am:is (equal '(:delete :update :create)
+                   (test-idempotency-engine-calls engine)))))
