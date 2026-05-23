@@ -79,10 +79,10 @@ Not thread-safe."))
     (when (and entry
                (eq :processing (idempotency-entry-state entry))
                (string= fingerprint (idempotency-entry-fingerprint entry)))
-       (setf (idempotency-entry-state entry) :completed
-             (idempotency-entry-response entry) response
-             (idempotency-entry-expires-at entry) (+ now ttl-seconds))
-       t)))
+      (setf (idempotency-entry-state entry) :completed
+            (idempotency-entry-response entry) response
+            (idempotency-entry-expires-at entry) (+ now ttl-seconds))
+      t)))
 
 (defmethod update-entry ((engine memory-idempotency-engine) key fingerprint response ttl-seconds now)
   (update-entry (idempotency-engine-store engine)

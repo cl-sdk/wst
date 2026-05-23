@@ -56,12 +56,7 @@ For a complete engine implementation, specialize all three methods."))
 Concrete engine implementations that delegate to a store object should
 define this accessor."))
 
-(defun make-idempotency-engine (&key
-                                  (ttl-seconds 86400)
-                                  (clock #'get-universal-time)
-                                  (cache-response-p (lambda (response)
-                                                      (< (cached-response-status response) 500))))
-  (declare (ignore ttl-seconds clock cache-response-p))
+(defun make-idempotency-engine ()
   (error "No default store-backed idempotency engine is provided in io.github.cl-sdk.wst.idempotency. Use a concrete engine implementation such as io.github.cl-sdk.wst.idempotency.memory-store:make-memory-idempotency-engine or your own subclass."))
 
 (defun valid-idempotency-key-p (value)
