@@ -18,7 +18,7 @@ Suitable for single-process scenarios; not thread-safe.")
 Not thread-safe.
 
 Instantiate with MAKE-INSTANCE and optional initargs:
-- :table (defined on memory-idempotency-engine)
+- :table hash table used to persist entries (defaults to (make-hash-table :test #'equal))
 - :ttl-seconds, :clock, :cache-response-p (inherited from idempotency-engine)."))
 
 (defun %expired-p (entry now)
