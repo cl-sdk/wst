@@ -20,7 +20,6 @@
    #:idempotency-engine-ttl-seconds
    #:idempotency-engine-clock
    #:idempotency-engine-cache-response-p
-   #:idempotency
    #:valid-idempotency-key-p
    #:make-fingerprint
    #:begin-idempotency
@@ -47,38 +46,6 @@
   ttl-seconds
   clock
   cache-response-p)
-
-(defun idempotency (&key
-                      (store nil)
-                      (ttl-seconds 86400)
-                      (clock #'get-universal-time)
-                      (cache-response-p (lambda (response)
-                                          (< (cached-response-status response) 500)))
-                      (engine nil))
-  "Create a pure idempotency lifecycle closure.
-
-The returned closure accepts OPERATION plus lifecycle arguments:
-
-- :BEGIN SCOPE KEY FINGERPRINT
-    -> returns two values from BEGIN-IDEMPOTENCY.
-- :FINISH SCOPE KEY FINGERPRINT CACHED-RESPONSE
-    -> returns T/NIL from FINISH-IDEMPOTENCY.
-
-This API is independent of HTTP request/response objects."
-  (let ((engine (or engine
-                    (make-idempotency-engine
-                     :store (or store (make-instance 'memory-store))
-                     :ttl-seconds ttl-seconds
-                     :clock clock
-                     :cache-response-p cache-response-p))))
-    (lambda (operation &rest arguments)
-      (ecase operation
-        (:begin
-         (destructuring-bind (scope key fingerprint) arguments
-           (begin-idempotency engine scope key fingerprint)))
-        (:finish
-         (destructuring-bind (scope key fingerprint response) arguments
-           (finish-idempotency engine scope key fingerprint response)))))))
 
 (defun valid-idempotency-key-p (value)
   "Return T when VALUE is a non-empty key of at most 255 chars.
