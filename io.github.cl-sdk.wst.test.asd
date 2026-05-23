@@ -8,7 +8,6 @@
                #:io.github.cl-sdk.wst.circuit-breaker.test
                #:io.github.cl-sdk.wst.rate-limit.test
                #:io.github.cl-sdk.wst.idempotency.test
-               #:io.github.cl-sdk.wst.idempotency.routing.test
                #:io.github.cl-sdk.wst.cors.test
                #:io.github.cl-sdk.wst.routing.woo.test
                #:io.github.cl-sdk.wst.routing.response.dsl.test
