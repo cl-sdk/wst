@@ -33,19 +33,33 @@
   headers
   content)
 
-(defstruct (idempotency-engine
-            (:constructor make-idempotency-engine
-                          (&key
-                             (store (make-instance 'memory-store))
-                             (ttl-seconds 86400)
-                             (clock #'get-universal-time)
-                             (cache-response-p (lambda (response)
-                                                 (< (cached-response-status response) 500))))))
-  "Core idempotency orchestration object."
-  store
-  ttl-seconds
-  clock
-  cache-response-p)
+(defclass idempotency-engine ()
+  ((store :initarg :store
+          :initform (make-instance 'memory-store)
+          :reader idempotency-engine-store)
+   (ttl-seconds :initarg :ttl-seconds
+                :initform 86400
+                :reader idempotency-engine-ttl-seconds)
+   (clock :initarg :clock
+          :initform #'get-universal-time
+          :reader idempotency-engine-clock)
+   (cache-response-p :initarg :cache-response-p
+                     :initform (lambda (response)
+                                 (< (cached-response-status response) 500))
+                     :reader idempotency-engine-cache-response-p))
+  (:documentation "Core idempotency orchestration object."))
+
+(defun make-idempotency-engine (&key
+                                  (store (make-instance 'memory-store))
+                                  (ttl-seconds 86400)
+                                  (clock #'get-universal-time)
+                                  (cache-response-p (lambda (response)
+                                                      (< (cached-response-status response) 500))))
+  (make-instance 'idempotency-engine
+                 :store store
+                 :ttl-seconds ttl-seconds
+                 :clock clock
+                 :cache-response-p cache-response-p))
 
 (defun valid-idempotency-key-p (value)
   "Return T when VALUE is a non-empty key of at most 255 chars.
