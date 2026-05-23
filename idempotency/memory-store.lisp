@@ -18,7 +18,7 @@ Suitable for single-process scenarios; not thread-safe.")
 Not thread-safe.
 
 Instantiate with MAKE-INSTANCE and optional initargs:
-- :table (subclass slot)
+- :table (defined on memory-idempotency-engine)
 - :ttl-seconds, :clock, :cache-response-p (inherited from idempotency-engine)."))
 
 (defun %expired-p (entry now)
