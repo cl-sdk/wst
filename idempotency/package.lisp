@@ -47,7 +47,9 @@
   (:documentation "Core idempotency orchestration object.
 
 Engine subclasses can define their own storage slots and specialize
-create-entry/update-entry/delete-entry for storage behavior.
+io.github.cl-sdk.wst.idempotency.store:create-entry,
+io.github.cl-sdk.wst.idempotency.store:update-entry and
+io.github.cl-sdk.wst.idempotency.store:delete-entry for storage behavior.
 For a complete engine implementation, specialize all three methods."))
 
 (defclass memory-idempotency-engine (idempotency-engine)

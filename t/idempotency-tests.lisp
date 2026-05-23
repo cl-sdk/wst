@@ -119,8 +119,9 @@
       (5am:is (eq :started decision)))))
 
 (5am:def-test register-store-drop-can-be-specialized-on-engine ()
-  (let ((engine (make-instance 'test-idempotency-engine
-                               :custom-storage (make-hash-table))))
+  (let* ((storage (make-hash-table))
+         (engine (make-instance 'test-idempotency-engine
+                                :custom-storage storage)))
     (multiple-value-bind (decision replayed)
         (io.github.cl-sdk.wst.idempotency:register-request engine "scope" "key" "fingerprint")
       (declare (ignore replayed))
@@ -134,5 +135,6 @@
     (5am:is-true (io.github.cl-sdk.wst.idempotency:drop-request
                   engine "scope" "key" "fingerprint"))
     (5am:is (hash-table-p (test-idempotency-engine-custom-storage engine)))
+    (5am:is (eq storage (test-idempotency-engine-custom-storage engine)))
     (5am:is (equal '(:delete :update :create)
                    (test-idempotency-engine-calls engine)))))
