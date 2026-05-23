@@ -11,6 +11,27 @@
   (5am:is-true (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p "short-key"))
   (5am:is-false (io.github.cl-sdk.wst.idempotency:valid-idempotency-key-p (make-string 256 :initial-element #\a))))
 
+(5am:def-test main-api-claim-complete-works ()
+  (let* ((now 100)
+         (engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine
+                  :clock (lambda () now)))
+         (scope "checkout")
+         (key "k-main")
+         (fingerprint "f-main")
+         (cached (io.github.cl-sdk.wst.idempotency:make-cached-response
+                  :status 200
+                  :headers nil
+                  :content "ok")))
+    (multiple-value-bind (decision replayed)
+        (io.github.cl-sdk.wst.idempotency:claim-idempotency engine scope key fingerprint)
+      (declare (ignore replayed))
+      (5am:is (eq :started decision)))
+    (5am:is-true (io.github.cl-sdk.wst.idempotency:complete-idempotency engine scope key fingerprint cached))
+    (multiple-value-bind (decision replayed)
+        (io.github.cl-sdk.wst.idempotency:claim-idempotency engine scope key fingerprint)
+      (5am:is (eq :replay decision))
+      (5am:is (string= "ok" (io.github.cl-sdk.wst.idempotency:cached-response-content replayed))))))
+
 (5am:def-test begin-finish-then-replay ()
   (let* ((now 100)
          (engine (io.github.cl-sdk.wst.idempotency:make-idempotency-engine
