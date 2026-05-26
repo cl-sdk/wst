@@ -3,7 +3,9 @@
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.1.0"
-  :depends-on (#:str #:serapeum)
+  :depends-on (#:str
+               #:serapeum
+               #:io.github.cl-sdk.wst.routing.response.dsl)
   :pathname "request-accept"
   :serial t
   :components ((:file "package")))
