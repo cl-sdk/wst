@@ -17,6 +17,7 @@
                #:io.github.cl-sdk.wst.routing.response.dsl.test
                #:io.github.cl-sdk.wst.routing.test
                #:io.github.cl-sdk.wst.routing.woo.test
+               #:io.github.cl-sdk.wst.session.csrf.test
                #:io.github.cl-sdk.wst.session.sqlite.test
                #:io.github.cl-sdk.wst.trace-context.routing.test
                #:io.github.cl-sdk.wst.trace-context.test))
