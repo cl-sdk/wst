@@ -3,7 +3,9 @@
   :author "Bruno Dias"
   :license "Unlicense"
   :version "0.1.0"
-  :depends-on (#:io.github.cl-sdk.wst.circuit-breaker.test
+  :depends-on (#:io.github.cl-sdk.wst.authorization.routing.test
+               #:io.github.cl-sdk.wst.authorization.test
+               #:io.github.cl-sdk.wst.circuit-breaker.test
                #:io.github.cl-sdk.wst.cors.test
                #:io.github.cl-sdk.wst.flash.test
                #:io.github.cl-sdk.wst.feature-flag.routing.test
