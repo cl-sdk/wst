@@ -25,6 +25,7 @@ Behavior is built from pipelines and composition, where middleware and handlers 
 - Accept-aware response selection helpers (`io.github.cl-sdk.wst.request-accept`)
 - W3C Trace Context propagation (`traceparent`/`tracestate`) with routing adapter (`io.github.cl-sdk.wst.trace-context`)
 - Feature flags following the [openfeature specification](https://openfeature.dev) and routing adapter (`io.github.cl-sdk.wst.feature-flag`)
+- INCITS 359-inspired authorization core and routing adapter (`io.github.cl-sdk.wst.authorization`)
 
 Example route composition:
 
