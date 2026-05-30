@@ -19,11 +19,18 @@
         {
           devShells.default = pkgs.mkShell {
             packages = [
-              pkgs.sbcl
+              pkgs.openssl
+              pkgs.sqlite
               pkgs.git
+              pkgs.sbcl
             ];
 
             shellHook = ''
+            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath [
+                                              pkgs.openssl
+                                              pkgs.sqlite
+                                            ]}
+
             export INIT_FILE="$PWD/.sbclrc"
             export QUICKLISP_HOME=$PWD/.quicklisp
 
