@@ -5,6 +5,7 @@
   :version "0.1.0"
   :depends-on (#:io.github.cl-sdk.wst.circuit-breaker.test
                #:io.github.cl-sdk.wst.cors.test
+               #:io.github.cl-sdk.wst.flash.test
                #:io.github.cl-sdk.wst.feature-flag.routing.test
                #:io.github.cl-sdk.wst.feature-flag.test
                #:io.github.cl-sdk.wst.idempotency.test

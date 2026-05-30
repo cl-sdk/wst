@@ -15,6 +15,7 @@ Behavior is built from pipelines and composition, where middleware and handlers 
 - HTTP request/response helpers
 - Cookie parsing utilities
 - Session and CSRF support
+- Session-backed one-time flash messages
 - Request content parsing middleware
 - CORS middleware
 - Static file routing
